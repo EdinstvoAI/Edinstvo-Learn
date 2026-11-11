@@ -1,0 +1,22 @@
+{
+  "name": "edinstvo-learn",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "local:open": "node --env-file=.env server/open-local.js"
+  },
+  "dependencies": {
+    "@edinstvo/glass": "1.1.4",
+    "gsap": "3.15.0",
+    "lit": "3.3.3",
+    "lottie-web": "5.13.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "vite": "8.3.5"
+  }
+}

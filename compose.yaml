@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: learn
+      POSTGRES_USER: learn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - learn-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U learn -d learn]
+      interval: 3s
+      timeout: 3s
+      retries: 12
+
+  app:
+    image: edinstvo-learn:dev
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://learn:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/learn
+      LOCAL_SETUP_TOKEN: ${LOCAL_SETUP_TOKEN:-}
+      ACCESS_CODE_SECRET: ${ACCESS_CODE_SECRET:?Set ACCESS_CODE_SECRET in .env}
+      LOCAL_MENTOR_NAME: ${LOCAL_MENTOR_NAME:-Макар}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_MENTOR_ID: ${TELEGRAM_MENTOR_ID:-}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+    ports:
+      - 127.0.0.1:${LEARN_PORT:-5188}:5188
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:5188/api/state').then(r => { if (!r.ok) process.exit(1) })"]
+      interval: 5s
+      timeout: 4s
+      retries: 8
+
+volumes:
+  learn-data:

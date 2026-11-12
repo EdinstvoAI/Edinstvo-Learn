@@ -12,7 +12,7 @@
 - [src/questions.js](../src/questions.js), [src/skills.js](../src/skills.js), [server/assessment.js](../server/assessment.js) — вопросы, общий каталог и серверный ключ.
 - [src/api.js](../src/api.js), [server/api.js](../server/api.js), [vite.config.js](../vite.config.js) — клиент и маршруты API.
 - [server/database.js](../server/database.js), [server/schema.sql](../server/schema.sql), [server/open-local.js](../server/open-local.js) — PostgreSQL, таблицы и вход на Mac.
-- [Dockerfile](../Dockerfile), [compose.yaml](../compose.yaml), [.env.example](../.env.example) — контейнеры и имена параметров.
+- [Dockerfile](../Dockerfile), [compose.yaml](../compose.yaml), [.env.example](../.env.example) — контейнеры и имена параметров. [.env.local.example](../.env.local.example) — готовые значения для локальной проверки.
 - [package.json](../package.json), [package-lock.json](../package-lock.json) — зависимости и команды прототипа.
 - [public/profile-sky.webp](../public/profile-sky.webp), [public/fonts](../public/fonts) — обложка и шрифты.
 - [public/edinstvo-wordmark.svg](../public/edinstvo-wordmark.svg), [public/learn-wordmark.svg](../public/learn-wordmark.svg) — экспорт слоёв логотипа из Figma.

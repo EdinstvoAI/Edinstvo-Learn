@@ -1,6 +1,6 @@
 # Локальный запуск
 
-Создай `.env` по [примеру](../.env.example). Для `POSTGRES_PASSWORD`, `LOCAL_SETUP_TOKEN` и `ACCESS_CODE_SECRET` сгенерируй отдельные значения командой `openssl rand -hex 32`. Запуск и обновление — `docker compose up -d --build`. Фронтенд и API доступны вместе на [127.0.0.1:5188](http://127.0.0.1:5188/), PostgreSQL работает во внутренней сети.
+Быстрый старт с готовыми значениями описан в [DEPLOY.md](DEPLOY.md#локальная-проверка-на-своём-компьютере): `cp .env.local.example .env`. Для своих значений создай `.env` по [примеру](../.env.example). Для `POSTGRES_PASSWORD`, `LOCAL_SETUP_TOKEN` и `ACCESS_CODE_SECRET` сгенерируй отдельные значения командой `openssl rand -hex 32`. Запуск и обновление — `docker compose up -d --build`. Фронтенд и API доступны вместе на [127.0.0.1:5188](http://127.0.0.1:5188/), PostgreSQL работает во внутренней сети.
 
 На Mac команда `npm run local:open` открывает локальный аккаунт администратора. В «Моём кабинете» есть сегодняшний код. Задачи, фото, оценки и настройки сохраняются в томе PostgreSQL. `docker compose down` останавливает контейнеры с сохранением данных.
 

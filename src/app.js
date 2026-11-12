@@ -814,7 +814,7 @@ class LearnApp extends LitElement {
     const currentDay = today();
     const upcoming = this.personTasks.find((task) => !task.done
       && (task.date > currentDay || (task.date === currentDay && task.time >= now)));
-    const visibleTasks = this.personTasks.filter((task) => task.date === this.date).sort((a, b) => a.time.localeCompare(b.time));
+    const visibleTasks = this.personTasks.filter((task) => this.date >= (task.startDate ?? task.date) && this.date <= (task.endDate ?? task.date)).sort((a, b) => a.time.localeCompare(b.time));
     const learner = this.role === 'mentee';
     return html`
       ${learner ? this.learnerTitle('calendar', 'Календарь') : html`<div class="page-title"><div><h1>Календарь</h1><p>${this.person.name}</p></div></div>`}
@@ -838,7 +838,7 @@ class LearnApp extends LitElement {
           return html`<button aria-label=${longDate.format(date)} aria-pressed=${this.date === key}
             aria-current=${key === currentDay ? 'date' : nothing} @click=${() => { this.date = key; }}>
             <small>${day}</small><strong>${date.getUTCDate()}</strong>
-            <span class=${this.personTasks.some((task) => task.date === key) ? 'day-dot visible' : 'day-dot'}></span>
+            <span class=${this.personTasks.some((task) => key >= (task.startDate ?? task.date) && key <= (task.endDate ?? task.date)) ? 'day-dot visible' : 'day-dot'}></span>
           </button>`;
         })}</div>
       </section>
@@ -861,8 +861,13 @@ class LearnApp extends LitElement {
   calendarTask(task) {
     const project = this.person.projects.find((item) => item.id === task.projectId);
     const editable = this.role === 'mentor' || task.movable;
+    const starts = task.startDate ?? task.date;
+    const ends = task.endDate ?? task.date;
+    const range = ends !== starts
+      ? `${dayLabel.format(parseDate(starts))} до ${dayLabel.format(parseDate(ends))}`
+      : task.endTime && task.endTime !== task.time ? `${task.time} — ${task.endTime}` : '';
     return html`<div class="agenda-row">
-      <time class="agenda-time" datetime=${task.date + 'T' + task.time}>${task.time}</time>
+      <time class="agenda-time" datetime=${starts + 'T' + task.time}>${range || task.time}</time>
       <div><strong>${task.title}</strong>
         ${project ? html`<button class="task-project" @click=${() => this.open({ type: 'project', project })}>${project.name}</button>` : nothing}
         <p>${task.done ? 'Завершено' : editable ? 'Можно перенести' : 'Дата закреплена'}</p>
@@ -1043,8 +1048,10 @@ class LearnApp extends LitElement {
             <label>Уровень от 0 до 100<input name="score" type="number" min="0" max="100" step="1" required .value=${String(this.person.hard[key].levels[index])}></label>`
           : html`
             ${type === 'create' ? html`<label>Задача<input name="title" required maxlength="100"></label>` : html`<p>${task.title}</p>`}
-            <label>Дата<input type="date" name="date" required .value=${task?.date ?? this.date}></label>
-            <label>Время<input type="time" name="time" required .value=${task?.time ?? '18:00'}></label>
+            <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.date}></label>
+            <label>конец<input type="date" name="endDate" required .value=${task?.endDate ?? task?.date ?? this.date}></label></div>
+            <div class="task-range"><label>с<input type="time" name="time" required .value=${task?.time ?? '18:00'}></label>
+            <label>до<input type="time" name="endTime" required .value=${task?.endTime ?? task?.time ?? '19:00'}></label></div>
             ${this.person.projects.length ? html`<label>Проект<select name="projectId" aria-label="Проект">
               <option value="">Без проекта</option>
               ${this.person.projects.map((item) => html`<option value=${item.id}
@@ -1095,12 +1102,14 @@ class LearnApp extends LitElement {
       } else if (type === 'link-existing') {
         await this.mutate('link-task', { id: value('taskId'), projectId: project.id });
       } else {
-        const date = value('date');
+        const startDate = value('startDate');
+        const endDate = value('endDate');
         const time = value('time');
+        const endTime = value('endTime');
         await this.mutate(type === 'create' ? 'create-task' : 'move-task', {
-          title: value('title'), id: task?.id, date, time, projectId: value('projectId'), movable: data.has('movable'),
+          title: value('title'), id: task?.id, date: startDate, startDate, endDate, time, endTime, projectId: value('projectId'), movable: data.has('movable'),
         });
-        this.date = date;
+        this.date = startDate;
       }
       await this.refresh();
       this.querySelector('dialog').close();

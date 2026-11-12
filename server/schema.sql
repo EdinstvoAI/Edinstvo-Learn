@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   person uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   title text NOT NULL,
   day date NOT NULL,
+  start_day date,
+  end_day date,
   time time NOT NULL,
+  end_time time,
   movable boolean NOT NULL DEFAULT false,
   done boolean NOT NULL DEFAULT false
 );
@@ -32,6 +35,10 @@ CREATE TABLE IF NOT EXISTS tasks (
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS telegram_photo_url text;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS telegram_username text;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id uuid;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_day date;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_day date;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_time time;
+UPDATE tasks SET start_day = COALESCE(start_day, day), end_day = COALESCE(end_day, day), end_time = COALESCE(end_time, time);
 
 UPDATE accounts AS account
 SET profile = jsonb_set(profile, '{projects}', (

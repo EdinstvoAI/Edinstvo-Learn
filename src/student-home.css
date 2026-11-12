@@ -20,7 +20,7 @@
 .student-home .home-summary h1 { font-size: 24px; }
 .student-home .home-summary time { color: #515650; }
 .student-home .wheel-switch { --glass-fallback: #ffffff85; }
-.student-home .wheel-stage { aspect-ratio: 1.17; }
+.student-home .wheel-stage { aspect-ratio: 1.24; }
 .student-home .wheel-labels button[aria-pressed=true] {
   color: #4936b1;
   text-decoration: none;
@@ -559,16 +559,16 @@ mentor-note { display: block; }
 .student-home .home-inner-sheet { background: #fff; }
 .student-home .wheel-base, .student-home .purple .wheel-base { background: transparent; box-shadow: none; }
 .student-home .home-chart-slot .wheel-stage {
-  max-width: 372px;
-  aspect-ratio: 1.12;
+  max-width: 390px;
+  aspect-ratio: 1.22;
   margin-block: 10px 4px;
 }
-.student-home .home-chart-slot .wheel-disc { width: 57%; }
-.student-home .wheel-disc :is(.wheel-sectors, skill-growth) { inset: 1%; }
+.student-home .home-chart-slot .wheel-disc { width: 64%; }
+.student-home .wheel-disc :is(.wheel-sectors, skill-growth) { inset: 6%; }
 .student-home .wheel-glass { background: linear-gradient(145deg,#fff3,transparent 47%); }
 .student-home .wheel-labels button {
   width: max-content;
-  max-width: min(76px, 26%);
+  max-width: min(82px, 27%);
   font-size: 11px;
 }
 .student-home .wheel-labels button:focus-visible { outline: 1px solid #8673aa; border-radius: 7px; }
@@ -617,20 +617,20 @@ mentor-note { display: block; }
 .student-shell .calendar-layout .calendar-card {
   margin-bottom: 8px;
   border-radius: 18px;
-  background: radial-gradient(ellipse at 0 105%, #f3bda6 0, transparent 54%),
-    linear-gradient(115deg, #c3d5d3, #80b5bc 76%, #a4ccca);
+  background: #f3f3f3;
   padding: 12px 14px 8px;
 }
 .student-shell .calendar-card .calendar-date { background: #ffffff73; }
 .student-shell .calendar-card .week button { background: transparent; border-radius: 14px; }
 .student-shell .calendar-card .week button[aria-pressed=true] { color: #202024; background: #fff; }
-.student-shell .calendar-next { margin-bottom: 16px; padding: 10px 14px; border-radius: 16px; background: linear-gradient(105deg,#f5dce9,#fae9e1); }
+.student-shell .calendar-next { margin-bottom: 16px; padding: 10px 14px; border-radius: 16px; background: #f3f3f3; }
 .student-shell .calendar-next button { grid-template-columns: 40px minmax(0,1fr); }
 .student-shell .calendar-next h2 { margin-bottom: 2px; }
 .student-shell .calendar-next .next-day { font-size: 21px; }
 .student-shell .agenda { padding: 0; display: grid; gap: 6px; }
 .student-shell .agenda-row, .student-shell .agenda-empty { background: #f6f5f3; border-radius: 13px; padding: 11px 10px; }
-.student-shell .agenda-row { border-left: 3px solid #81b7aa; }
+.student-shell .agenda-row { border-left: 3px solid #b8e67d; }
+.task-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .student-shell .agenda-row + .agenda-row { margin-top: 0; border-top: 0; }
 
 .project-folder { justify-items: start; }

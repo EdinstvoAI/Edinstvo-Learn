@@ -219,7 +219,9 @@ export function makeApi(env) {
     `, [actor.id]);
     const ids = rows.map((person) => person.id);
     const [tasks, photos] = await Promise.all([
-      client.query(`SELECT id, person, title, day::text AS date, to_char(time, 'HH24:MI') AS time, movable, done, project_id AS "projectId"
+      client.query(`SELECT id, person, title, day::text AS date, COALESCE(start_day, day)::text AS "startDate",
+        COALESCE(end_day, day)::text AS "endDate", to_char(time, 'HH24:MI') AS time,
+        to_char(COALESCE(end_time, time), 'HH24:MI') AS "endTime", movable, done, project_id AS "projectId"
         FROM tasks WHERE person = ANY($1::uuid[]) ORDER BY day, time`, [ids]),
       client.query(`SELECT id, person, caption, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
         FROM photos WHERE person = ANY($1::uuid[]) ORDER BY created_at DESC`, [ids]),
@@ -352,9 +354,12 @@ export function makeApi(env) {
           'Выбери проект этого ученика.');
         if (action === 'create-task') {
           const title = lowerText(data.title, 100);
-          requireInput(title && validDate(data.date) && timePattern.test(data.time));
-          await client.query('INSERT INTO tasks (person, title, day, time, movable, project_id) VALUES ($1, $2, $3, $4, $5, $6)',
-            [person, title, data.date, data.time, !mentor || data.movable === true, projectId]);
+          const startDate = data.startDate || data.date;
+          const endDate = data.endDate || startDate;
+          const endTime = data.endTime || data.time;
+          requireInput(title && validDate(startDate) && validDate(endDate) && startDate <= endDate && timePattern.test(data.time) && timePattern.test(endTime) && (startDate < endDate || endTime >= data.time));
+          await client.query('INSERT INTO tasks (person, title, day, start_day, end_day, time, end_time, movable, project_id) VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8)',
+            [person, title, startDate, endDate, data.time, endTime, !mentor || data.movable === true, projectId]);
         } else {
           requireInput(typeof data.id === 'string' && uuid.test(data.id));
           const update = await client.query('UPDATE tasks SET project_id = $1 WHERE id = $2 AND person = $3 AND ($4 OR movable)',
@@ -363,14 +368,17 @@ export function makeApi(env) {
         }
         return {};
       } else if (action === 'move-task') {
-        requireInput(validDate(data.date) && timePattern.test(data.time) && typeof data.id === 'string' && uuid.test(data.id));
+        const startDate = data.startDate || data.date;
+        const endDate = data.endDate || startDate;
+        const endTime = data.endTime || data.time;
+        requireInput(validDate(startDate) && validDate(endDate) && startDate <= endDate && timePattern.test(data.time) && timePattern.test(endTime) && (startDate < endDate || endTime >= data.time) && typeof data.id === 'string' && uuid.test(data.id));
         const projectId = data.projectId || null;
         requireInput(!projectId || (profile.projects ?? []).some((project) => project.id === projectId),
           'Выбери проект этого ученика.');
-        const update = await client.query(`UPDATE tasks SET day = $1, time = $2,
-          project_id = CASE WHEN $6 THEN $7 ELSE project_id END
-          WHERE id = $3 AND person = $4 AND NOT done AND ($5 OR movable)`,
-          [data.date, data.time, data.id, person, mentor, Object.hasOwn(data, 'projectId'), projectId]);
+        const update = await client.query(`UPDATE tasks SET day = $1, start_day = $1, end_day = $2, time = $3, end_time = $4,
+          project_id = CASE WHEN $7 THEN $8 ELSE project_id END
+          WHERE id = $5 AND person = $6 AND NOT done AND ($9 OR movable)`,
+          [startDate, endDate, data.time, endTime, data.id, person, Object.hasOwn(data, 'projectId'), projectId, mentor]);
         allowed(update.rowCount);
         return {};
       } else {

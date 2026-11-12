@@ -73,8 +73,41 @@ function checkmark(color) {
   };
 }
 
+function eraserScene() {
+  const fill = (color) => ({ ty: 'fl', c: property(color), o: property(100), r: 1 });
+  const spot = (x, y, size) => ({ ty: 'el', p: property([x, y]), s: property([size, size]) });
+  const block = (x, y, width, height, radius) => ({
+    ty: 'rc', p: property([x, y]), s: property([width, height]), r: property(radius),
+  });
+  const group = (shape, color) => ({ ty: 'gr', it: [shape, fill(color)] });
+  const layer = (index, position, rotation, opacity, shapes) => ({
+    ty: 4, ind: index, ip: 0, op: 50, st: 0, sr: 1,
+    ks: { p: keyframes(position), r: keyframes(rotation), o: keyframes(opacity),
+      a: property([0, 0, 0]), s: property([100, 100, 100]) },
+    shapes,
+  });
+  return {
+    v: '5.13.0', fr: 60, ip: 0, op: 50, w: 240, h: 108, assets: [],
+    layers: [
+      layer(1, [[0, [28, 78, 0]], [10, [68, 61, 0]], [20, [108, 72, 0]], [31, [156, 52, 0]], [48, [209, 29, 0]]],
+        [[0, [-24]], [13, [18]], [23, [-12]], [46, [-34]]], [[0, [0]], [7, [100]], [34, [100]], [49, [0]]], [
+          group(spot(-4, -4, 4), [.24, .17, .37, 1]),
+          group(spot(7, -4, 4), [.24, .17, .37, 1]),
+          group(block(1, -1, 49, 31, 10), [.79, .7, 1, 1]),
+          group(block(4, 3, 49, 30, 10), [.53, .37, .85, 1]),
+        ]),
+      ...Array.from({ length: 7 }, (_, index) => {
+        const x = 64 + index * 11;
+        return layer(index + 2, [[0, [x, 75, 0]], [16, [x, 75, 0]], [43, [x - 15 - index * 3, 89 - index * 8, 0]]],
+          [[0, [0]], [45, [83 + index * 20]]], [[0, [0]], [12 + index, [0]], [21 + index, [90]], [48, [0]]],
+          [group(block(0, 0, 4 + index % 3, 3, 1), index % 2 ? [.68, .51, .94, 1] : [.42, .29, .62, 1])]);
+      }),
+    ],
+  };
+}
+
 class SkillCelebration extends LitElement {
-  static properties = { color: { type: String }, compact: { type: Boolean }, orbit: { type: Boolean } };
+  static properties = { color: { type: String }, compact: { type: Boolean }, orbit: { type: Boolean }, eraser: { type: Boolean } };
   static styles = css`
     :host { display: block; pointer-events: none; }
     div { width: 100%; height: 100%; }
@@ -88,7 +121,8 @@ class SkillCelebration extends LitElement {
     if (!this.isConnected) return;
     this.animation = lottie.loadAnimation({
       container: this.renderRoot.querySelector('div'), renderer: 'canvas',
-      animationData: burst(this.color, this.compact, this.orbit), loop: false, autoplay: true,
+      animationData: this.eraser ? eraserScene() : burst(this.color, this.compact, this.orbit),
+      loop: false, autoplay: true,
     });
   }
 

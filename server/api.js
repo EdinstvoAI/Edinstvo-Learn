@@ -1,8 +1,9 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { openDatabase } from './database.js';
 import { scoreAssessment } from './assessment.js';
 
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+const folderNames = new Set('grass fur cheese leopard turf chrome gel vinyl terrazzo nylon corduroy foil gingham cactus cloud'.split(' '));
 const photoTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif']);
 const token = () => randomBytes(32).toString('hex');
 const hash = (value) => createHash('sha256').update(value).digest('hex');
@@ -54,8 +55,8 @@ function safeEqual(a, b) {
   return timingSafeEqual(Buffer.from(hash(a), 'hex'), Buffer.from(hash(b), 'hex'));
 }
 
-function telegramUser(initData, botToken) {
-  if (typeof initData !== 'string' || initData.length > 8192) return null;
+function telegramParams(initData, botToken) {
+  if (!botToken || typeof initData !== 'string' || initData.length > 8192) return null;
   const params = new URLSearchParams(initData);
   const signature = params.get('hash');
   params.delete('hash');
@@ -65,11 +66,22 @@ function telegramUser(initData, botToken) {
   const expected = createHmac('sha256', secret).update(data).digest('hex');
   const age = Date.now() / 1000 - Number(params.get('auth_date'));
   if (!safeEqual(signature, expected) || !Number.isFinite(age) || age > 600 || age < -30) return null;
+  return params;
+}
+
+function telegramUser(initData, botToken) {
   try {
-    const user = JSON.parse(params.get('user'));
+    const user = JSON.parse(telegramParams(initData, botToken)?.get('user') ?? 'null');
+    if (!user) return null;
     if (!Number.isSafeInteger(user.id) || user.id < 1) return null;
     const name = shortText([user.first_name, user.last_name].filter(Boolean).join(' '), 100);
-    return name ? { id: String(user.id), name } : null;
+    let photoUrl = null;
+    if (typeof user.photo_url === 'string' && user.photo_url.length <= 2048) {
+      const url = URL.parse(user.photo_url);
+      if (url?.protocol === 'https:' && !url.username && !url.password) photoUrl = url.href;
+    }
+    const username = typeof user.username === 'string' && /^[a-zA-Z0-9_]{1,32}$/.test(user.username) ? user.username : null;
+    return name ? { id: String(user.id), name, photoUrl, username } : null;
   } catch {
     return null;
   }
@@ -78,12 +90,14 @@ function telegramUser(initData, botToken) {
 export function makeApi(env) {
   const database = env.DATABASE_URL ? openDatabase(env.DATABASE_URL) : null;
   const allowLocal = Boolean(env.LOCAL_SETUP_TOKEN) && !env.PUBLIC_ORIGIN;
-  const secureCookie = env.PUBLIC_ORIGIN?.startsWith('https://') ? '; Secure' : '';
+  const cookiePolicy = env.PUBLIC_ORIGIN?.startsWith('https://')
+    ? 'SameSite=None; Secure; Partitioned'
+    : 'SameSite=Lax';
 
   async function session(client, response, accountId) {
     const key = token();
     await client.query('INSERT INTO sessions (token_hash, account_id) VALUES ($1, $2)', [hash(key), accountId]);
-    response.setHeader('Set-Cookie', 'learn_session=' + key + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000' + secureCookie);
+    response.setHeader('Set-Cookie', 'learn_session=' + key + '; Path=/; HttpOnly; Max-Age=2592000; ' + cookiePolicy);
   }
 
   async function actorFor(client, request) {
@@ -91,7 +105,11 @@ export function makeApi(env) {
     if (!key) return null;
     const result = await client.query(`
       SELECT a.id, a.name, a.role, (a.role = 'mentee' AND a.access_granted_at IS NULL) AS pending FROM sessions s JOIN accounts a ON a.id = s.account_id
-      WHERE s.token_hash = $1 AND s.expires_at > now()`, [hash(key)]);
+      WHERE s.token_hash = $1 AND s.expires_at > now()
+        AND (NOT $2 OR (a.telegram_id IS NOT NULL AND
+          (a.telegram_id = $3 AND a.role = 'mentor' OR a.role = 'mentee' AND EXISTS (
+            SELECT 1 FROM accounts m WHERE m.id = a.mentor_id AND m.telegram_id = $3
+          ))))`, [hash(key), Boolean(env.PUBLIC_ORIGIN), env.TELEGRAM_MENTOR_ID ?? null]);
     return result.rows[0] ?? null;
   }
 
@@ -126,14 +144,31 @@ export function makeApi(env) {
     if (result === 'invalid') throw new ApiError(422, 'Код не подошёл. Проверь сегодняшний код.');
   }
 
+  async function telegramMentor(client, name = null) {
+    const telegramId = env.TELEGRAM_MENTOR_ID;
+    const existing = (await client.query("SELECT id FROM accounts WHERE role = 'mentor' AND telegram_id = $1", [telegramId])).rows[0];
+    if (existing) {
+      if (name) await client.query('UPDATE accounts SET name = $1 WHERE id = $2 AND name <> $1', [name, existing.id]);
+      return existing.id;
+    }
+    const unbound = (await client.query("SELECT id FROM accounts WHERE role = 'mentor' AND telegram_id IS NULL ORDER BY id LIMIT 1")).rows[0];
+    if (unbound) {
+      await client.query('UPDATE accounts SET telegram_id = $1, name = COALESCE($2, name) WHERE id = $3', [telegramId, name, unbound.id]);
+      return unbound.id;
+    }
+    return (await client.query("INSERT INTO accounts (role, name, telegram_id) VALUES ('mentor', $1, $2) RETURNING id",
+      [name ?? 'Ментор', telegramId])).rows[0].id;
+  }
+
   async function createStudent(client, name, telegramId = null, localId = null) {
-    const mentor = (await client.query(`SELECT id FROM accounts WHERE role = 'mentor'
-      ORDER BY (telegram_id = $1) DESC NULLS LAST, id LIMIT 1`, [env.TELEGRAM_MENTOR_ID || null])).rows[0];
-    if (!mentor) throw new ApiError(503, 'Кабинет ментора ещё не настроен.');
+    const mentorId = telegramId && env.TELEGRAM_MENTOR_ID
+      ? await telegramMentor(client)
+      : (await client.query("SELECT id FROM accounts WHERE role = 'mentor' ORDER BY id LIMIT 1")).rows[0]?.id;
+    if (!mentorId) throw new ApiError(503, 'Кабинет ментора ещё не настроен.');
     return (await client.query(`
       INSERT INTO accounts (role, name, mentor_id, telegram_id, local_id)
       VALUES ('mentee', $1, $2, $3, $4) RETURNING id
-    `, [name, mentor.id, telegramId, localId])).rows[0].id;
+    `, [name, mentorId, telegramId, localId])).rows[0].id;
   }
 
   async function signIn(route, data) {
@@ -160,28 +195,30 @@ export function makeApi(env) {
       const user = telegramUser(data.initData, env.TELEGRAM_BOT_TOKEN);
       allowed(user);
       await client.query('SELECT pg_advisory_xact_lock(1348413)');
-      const existing = (await client.query('SELECT id FROM accounts WHERE telegram_id = $1', [user.id])).rows[0];
-      if (existing) return existing.id;
-      if (user.id === env.TELEGRAM_MENTOR_ID) {
-        const mentor = (await client.query("SELECT id FROM accounts WHERE role = 'mentor' AND telegram_id IS NULL LIMIT 1")).rows[0];
-        if (mentor) {
-          await client.query('UPDATE accounts SET telegram_id = $1 WHERE id = $2', [user.id, mentor.id]);
-          return mentor.id;
-        }
-        return (await client.query("INSERT INTO accounts (role, name, telegram_id) VALUES ('mentor', $1, $2) RETURNING id", [user.name, user.id])).rows[0].id;
+      const existing = (await client.query('SELECT id, role FROM accounts WHERE telegram_id = $1', [user.id])).rows[0];
+      if (existing) allowed((existing.role === 'mentor') === (user.id === env.TELEGRAM_MENTOR_ID));
+      const accountId = user.id === env.TELEGRAM_MENTOR_ID ? await telegramMentor(client, user.name) : existing?.id;
+      if (accountId) {
+        await client.query(`UPDATE accounts SET telegram_photo_url = $1, telegram_username = $2
+          WHERE id = $3 AND (telegram_photo_url, telegram_username) IS DISTINCT FROM ($1, $2)`,
+          [user.photoUrl, user.username, accountId]);
+        return accountId;
       }
-      return createStudent(client, user.name, user.id);
+      const id = await createStudent(client, user.name, user.id);
+      await client.query('UPDATE accounts SET telegram_photo_url = $1, telegram_username = $2 WHERE id = $3',
+        [user.photoUrl, user.username, id]);
+      return id;
     });
   }
 
   async function state(client, actor) {
     if (!actor || actor.pending) return { account: actor, people: [], tasks: [], telegram: Boolean(env.TELEGRAM_BOT_TOKEN) };
     const { rows } = await client.query(`
-      SELECT id, name, profile, access_granted_at FROM accounts WHERE role = 'mentee' AND (id = $1 OR mentor_id = $1) ORDER BY name
+      SELECT id, name, profile, access_granted_at, telegram_photo_url, telegram_username FROM accounts WHERE role = 'mentee' AND (id = $1 OR mentor_id = $1) ORDER BY name
     `, [actor.id]);
     const ids = rows.map((person) => person.id);
     const [tasks, photos] = await Promise.all([
-      client.query(`SELECT id, person, title, day::text AS date, to_char(time, 'HH24:MI') AS time, movable, done
+      client.query(`SELECT id, person, title, day::text AS date, to_char(time, 'HH24:MI') AS time, movable, done, project_id AS "projectId"
         FROM tasks WHERE person = ANY($1::uuid[]) ORDER BY day, time`, [ids]),
       client.query(`SELECT id, person, caption, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
         FROM photos WHERE person = ANY($1::uuid[]) ORDER BY created_at DESC`, [ids]),
@@ -189,9 +226,9 @@ export function makeApi(env) {
     return {
       account: actor,
       telegram: Boolean(env.TELEGRAM_BOT_TOKEN),
-      people: rows.map(({ id, name, profile, access_granted_at }) => ({
+      people: rows.map(({ id, name, profile: { skillGrowth, ...profile }, access_granted_at, telegram_photo_url, telegram_username }) => ({
         id, name, pending: !access_granted_at, initials: name.split(/\s+/).slice(0, 2).map((word) => word[0]).join(''),
-        ...profile, soft: profile.soft ?? null, hard: profile.hard ?? [], projects: profile.projects ?? [],
+        ...profile, ...(id === actor.id ? { skillGrowth: skillGrowth ?? [] } : {}), photoUrl: telegram_photo_url, username: telegram_username, soft: profile.soft ?? null, hard: profile.hard ?? [], projects: profile.projects ?? [],
         photos: photos.rows.filter((photo) => photo.person === id).map((photo) => ({ ...photo, url: '/api/photo/' + photo.id })),
       })),
       tasks: tasks.rows,
@@ -211,14 +248,13 @@ export function makeApi(env) {
         'Проверь ссылку ' + type + '.');
       sources.push({ type, url: url.href });
     }
-    requireInput(sources.length, 'Добавь ссылку на GitHub или Figma.');
     return sources;
   }
 
   async function mutate(actor, person, action, data) {
     return database.transaction(async (client) => {
       const row = (await client.query(`
-        SELECT profile FROM accounts WHERE role = 'mentee' AND id = $1 AND (id = $2 OR mentor_id = $2) FOR UPDATE
+        SELECT profile, telegram_id FROM accounts WHERE role = 'mentee' AND id = $1 AND (id = $2 OR mentor_id = $2) FOR UPDATE
       `, [person, actor.id])).rows[0];
       allowed(row);
       const profile = row.profile;
@@ -229,6 +265,15 @@ export function makeApi(env) {
         const levels = scoreAssessment(data.answers);
         requireInput(levels, 'Ответь на все вопросы.');
         profile.soft = levels;
+      } else if (action === 'telegram-contact') {
+        allowed(!mentor && row.telegram_id);
+        const signed = telegramParams(data.contact, env.TELEGRAM_BOT_TOKEN);
+        let contact;
+        try { contact = JSON.parse(signed?.get('contact') ?? 'null'); } catch { contact = null; }
+        const number = contact?.phone_number;
+        requireInput(contact && String(contact.user_id) === row.telegram_id && typeof number === 'string' &&
+          /^\+?[1-9]\d{6,14}$/.test(number), 'Telegram не подтвердил номер.');
+        profile.phone = '+' + number.replace(/^\+/, '');
       } else if (action === 'layers') {
         allowed(!mentor);
         requireInput(['sky', 'mint', 'violet'].includes(data.cover));
@@ -239,32 +284,53 @@ export function makeApi(env) {
         const skills = Array.isArray(data.skills) ? [...new Set(data.skills.map((item) => shortText(item, 70)).filter(Boolean))] : [];
         requireInput(name && skills.length > 0 && skills.length <= 10, 'Укажи название и до 10 навыков.');
         profile.hard = [...(profile.hard ?? []), { name, skills, levels: skills.map(() => 0) }];
+      } else if (action === 'growth-seen') {
+        allowed(!mentor);
+        requireInput(typeof data.id === 'string' && uuid.test(data.id));
+        profile.skillGrowth = (profile.skillGrowth ?? []).filter((event) => event.id !== data.id);
       } else if (action === 'score') {
         allowed(mentor);
         const { key, index, score } = data;
         requireInput(Number.isInteger(index) && index >= 0 && Number.isInteger(score));
+        let from;
+        let to;
+        let reached = false;
         if (key === 'soft') {
           const reason = shortText(data.reason, 180);
           requireInput(profile.soft && index < 10 && score >= 1 && score <= 5 && reason);
           profile.mentorScores ??= {};
           const previous = profile.mentorScores[index];
+          from = previous ? previous.score * 20 : profile.soft[index];
+          to = score * 20;
           const history = previous ? [...(previous.history ?? []), { score: previous.score, reason: previous.reason, updatedAt: previous.updatedAt }] : [];
           profile.mentorScores[index] = { score, reason, updatedAt: new Date().toISOString(), history };
         } else {
           const group = Number.isInteger(key) ? profile.hard?.[key] : null;
           requireInput(group && index < group.levels.length && score >= 0 && score <= 100);
+          from = group.levels[index];
+          to = score;
           group.levels[index] = score;
-          const reached = !group.celebrated && group.levels.every((level) => level >= 75);
+          reached = !group.celebrated && group.levels.every((level) => level >= 75);
           group.celebrated ||= reached;
-          await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
-          return { reached };
         }
-      } else if (action === 'project') {
+        if (to > from) {
+          profile.skillGrowth = [...(profile.skillGrowth ?? []), { id: randomUUID(), key, index, from, to }];
+        }
+        await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
+        return { reached };
+      } else if (action === 'project-comment') {
         allowed(mentor);
+        const project = profile.projects?.find((item) => item.id === data.projectId);
+        const text = shortText(data.text, 1000);
+        requireInput(project && text, 'Укажи проект и текст комментария.');
+        project.comments = [...(project.comments ?? []), {
+          id: randomUUID(), text, author: actor.name, createdAt: new Date().toISOString(),
+        }];
+      } else if (action === 'project') {
         const name = shortText(data.name, 80);
-        requireInput(name);
+        requireInput(name && (!data.folder || folderNames.has(data.folder)));
         profile.projects = [...(profile.projects ?? []), {
-          name, description: shortText(data.description, 160), sources: projectSources(data),
+          id: randomUUID(), name, folder: data.folder || 'gel', description: shortText(data.description, 160), sources: projectSources(data),
         }];
       } else if (action === 'photo') {
         allowed(!mentor);
@@ -279,20 +345,32 @@ export function makeApi(env) {
         requireInput(typeof data.id === 'string' && uuid.test(data.id));
         await client.query('DELETE FROM photos WHERE id = $1 AND person = $2', [data.id, person]);
         return {};
-      } else if (action === 'create-task' || action === 'move-task') {
-        requireInput(validDate(data.date) && timePattern.test(data.time));
+      } else if (action === 'create-task' || action === 'link-task') {
+        const projectId = data.projectId || null;
+        requireInput(!projectId || (profile.projects ?? []).some((project) => project.id === projectId),
+          'Выбери проект этого ученика.');
         if (action === 'create-task') {
-          allowed(mentor);
           const title = shortText(data.title, 100);
-          requireInput(title);
-          await client.query('INSERT INTO tasks (person, title, day, time, movable) VALUES ($1, $2, $3, $4, $5)',
-            [person, title, data.date, data.time, data.movable === true]);
+          requireInput(title && validDate(data.date) && timePattern.test(data.time));
+          await client.query('INSERT INTO tasks (person, title, day, time, movable, project_id) VALUES ($1, $2, $3, $4, $5, $6)',
+            [person, title, data.date, data.time, !mentor || data.movable === true, projectId]);
         } else {
           requireInput(typeof data.id === 'string' && uuid.test(data.id));
-          const update = await client.query('UPDATE tasks SET day = $1, time = $2 WHERE id = $3 AND person = $4 AND NOT done AND ($5 OR movable)',
-            [data.date, data.time, data.id, person, mentor]);
+          const update = await client.query('UPDATE tasks SET project_id = $1 WHERE id = $2 AND person = $3 AND ($4 OR movable)',
+            [projectId, data.id, person, mentor]);
           allowed(update.rowCount);
         }
+        return {};
+      } else if (action === 'move-task') {
+        requireInput(validDate(data.date) && timePattern.test(data.time) && typeof data.id === 'string' && uuid.test(data.id));
+        const projectId = data.projectId || null;
+        requireInput(!projectId || (profile.projects ?? []).some((project) => project.id === projectId),
+          'Выбери проект этого ученика.');
+        const update = await client.query(`UPDATE tasks SET day = $1, time = $2,
+          project_id = CASE WHEN $6 THEN $7 ELSE project_id END
+          WHERE id = $3 AND person = $4 AND NOT done AND ($5 OR movable)`,
+          [data.date, data.time, data.id, person, mentor, Object.hasOwn(data, 'projectId'), projectId]);
+        allowed(update.rowCount);
         return {};
       } else {
         throw new ApiError(404, 'Действие не найдено.');
@@ -321,7 +399,7 @@ export function makeApi(env) {
         }
         if (request.method === 'POST') {
           const origin = request.headers.origin;
-          allowed(!origin || origin === env.PUBLIC_ORIGIN || origin === 'http://' + request.headers.host);
+          allowed(!origin || origin === (env.PUBLIC_ORIGIN || 'http://' + request.headers.host));
           requireInput(request.headers['content-type']?.startsWith('application/json'));
           const data = await bodyOf(request);
           if (['/local', '/local/student', '/telegram'].includes(route)) {

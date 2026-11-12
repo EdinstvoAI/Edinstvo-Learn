@@ -29,6 +29,17 @@ CREATE TABLE IF NOT EXISTS tasks (
   done boolean NOT NULL DEFAULT false
 );
 
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS telegram_photo_url text;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS telegram_username text;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id uuid;
+
+UPDATE accounts AS account
+SET profile = jsonb_set(profile, '{projects}', (
+  SELECT jsonb_agg(CASE WHEN item ? 'id' THEN item ELSE item || jsonb_build_object('id', gen_random_uuid()) END ORDER BY position)
+  FROM jsonb_array_elements(account.profile->'projects') WITH ORDINALITY AS projects(item, position)
+))
+WHERE profile @? '$.projects[*] ? (!exists(@.id))';
+
 CREATE TABLE IF NOT EXISTS photos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   person uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,

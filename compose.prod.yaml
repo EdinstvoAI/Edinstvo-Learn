@@ -1,0 +1,29 @@
+services:
+  db:
+    restart: unless-stopped
+  app:
+    restart: unless-stopped
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the HTTPS origin}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set the Telegram bot token}
+      TELEGRAM_MENTOR_ID: ${TELEGRAM_MENTOR_ID:?Set your numeric Telegram ID}
+      LOCAL_SETUP_TOKEN: ""
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the HTTPS origin}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - learn-tls:/data
+      - learn-caddy-config:/config
+
+volumes:
+  learn-tls:
+  learn-caddy-config:

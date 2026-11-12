@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@edinstvo/glass": "1.1.4",
+    "@figma/expressive-components": "0.2.0",
     "gsap": "3.15.0",
     "lit": "3.3.3",
     "lottie-web": "5.13.0",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "vite": "8.3.5"

@@ -696,7 +696,10 @@ mentor-note { display: block; }
 }
 .profile-metal:focus-visible { outline: 2px solid #222; outline-offset: 5px; border-radius: 22px; }
 .profile-metal-inner { position: relative; min-height: 238px; transition: transform .72s cubic-bezier(.2,.72,.18,1); transform-style: preserve-3d; }
-.profile-metal-inner.is-flipped { transform: rotateY(180deg); }
+.profile-metal-inner { transform: rotateX(var(--card-x, 0deg)) rotateY(calc(var(--card-y, 0deg) + var(--card-flip, 0deg))); }
+.profile-metal-inner.is-flipped { --card-flip: 180deg; }
+.profile-metal.is-tilting .profile-metal-inner { transition-duration: .16s; transition-timing-function: ease-out; }
+.wordmark-hold { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .profile-metal-face {
   position: absolute; inset: 0; display: grid; justify-items: start; align-content: space-between;
   padding: 20px; border-radius: 22px; overflow: hidden; backface-visibility: hidden; color: #171717;

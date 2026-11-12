@@ -68,6 +68,7 @@ class LearnApp extends LitElement {
     wheelMotion: { state: true },
     selectedProject: { state: true },
     profileFlipped: { state: true },
+    mentorStep: { state: true },
   };
 
   constructor() {
@@ -98,6 +99,7 @@ class LearnApp extends LitElement {
     this.wheelMotion = 0;
     this.selectedProject = null;
     this.profileFlipped = false;
+    this.mentorStep = 0;
     this.motionState = typeof globalThis.DeviceOrientationEvent?.requestPermission === 'function' ? 'ask' : 'ready';
     this.orientWheel = (event) => this.onOrientation(event);
     this.onMotionGesture = (event) => {
@@ -273,6 +275,54 @@ class LearnApp extends LitElement {
     }
   }
 
+  // Скрытый вход ментора: удержание логотипа 10 секунд открывает форму почты и пароля, затем PIN.
+  holdWordmark(event) {
+    if (this.account || this.mentorStep || this.bootStatus !== 'ready') return;
+    event.preventDefault();
+    clearTimeout(this.holdTimer);
+    this.holdTimer = setTimeout(() => { this.bootError = ''; this.mentorStep = 1; }, 10_000);
+  }
+
+  async mentorSignIn(event) {
+    event.preventDefault();
+    if (this.formBusy) return;
+    const data = new FormData(event.currentTarget);
+    this.bootError = '';
+    if (this.mentorStep === 1) {
+      this.mentorLogin = { email: String(data.get('email')).trim(), password: String(data.get('password')) };
+      this.mentorStep = 2;
+      return;
+    }
+    this.formBusy = true;
+    try {
+      this.applyState(await request('/mentor', { ...this.mentorLogin, pin: String(data.get('pin')) }));
+      this.mentorStep = 0;
+      this.go('students');
+    } catch (error) {
+      this.bootError = error.message;
+      this.mentorStep = 1;
+    } finally {
+      this.mentorLogin = null;
+      this.formBusy = false;
+    }
+  }
+
+  tiltCard(event) {
+    if (event.pointerType !== 'mouse' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const card = event.currentTarget;
+    const bounds = card.getBoundingClientRect();
+    card.classList.add('is-tilting');
+    card.style.setProperty('--card-x', (0.5 - (event.clientY - bounds.top) / bounds.height) * 22 + 'deg');
+    card.style.setProperty('--card-y', ((event.clientX - bounds.left) / bounds.width - 0.5) * 26 + 'deg');
+  }
+
+  resetCard(event) {
+    const card = event.currentTarget;
+    card.classList.remove('is-tilting');
+    card.style.removeProperty('--card-x');
+    card.style.removeProperty('--card-y');
+  }
+
   async loadCode() {
     try {
       this.accessCode = (await request('/access-code')).code;
@@ -367,14 +417,24 @@ class LearnApp extends LitElement {
 
   render() {
     if (this.bootStatus !== 'ready' || !this.account || this.account.pending) {
+      const stopHold = () => clearTimeout(this.holdTimer);
       return html`<main class="sign-in">
-        ${this.wordmark()}
+        <div class="wordmark-hold" @pointerdown=${(event) => this.holdWordmark(event)} @pointerup=${stopHold}
+          @pointerleave=${stopHold} @pointercancel=${stopHold} @contextmenu=${(event) => event.preventDefault()}>${this.wordmark()}</div>
         ${this.bootStatus === 'loading' ? html`<p role="status">Открываем пространство…</p>`
           : this.account?.pending ? html`<form autocapitalize="none" @submit=${(event) => this.activate(event)}>
             <h1>Твой код доступа</h1><p>Возьми сегодняшний код у ментора.</p>
             <label>Код<input name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" maxlength="6"></label>
             <button class="primary" type="submit" ?disabled=${this.formBusy}>Продолжить</button>
           </form>`
+          : this.mentorStep ? keyed(this.mentorStep, html`<form @submit=${(event) => this.mentorSignIn(event)}>
+            <h1>Вход ментора</h1>
+            ${this.mentorStep === 1 ? html`<label>Почта<input name="email" type="email" autocomplete="username" required maxlength="200"></label>
+              <label>Пароль<input name="password" type="password" autocomplete="current-password" required maxlength="200"></label>`
+              : html`<label>PIN<input name="pin" type="password" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,8}" maxlength="8"></label>`}
+            <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.mentorStep === 1 ? 'Дальше' : 'Войти'}</button>
+            <button class="text-button" type="button" @click=${() => { this.mentorStep = 0; this.mentorLogin = null; this.bootError = ''; }}>Отмена</button>
+          </form>`)
           : this.bootStatus === 'ready' ? html`<p>Открой Единство Learn через Telegram.</p>` : nothing}
         ${this.bootError ? html`<p class="form-error" role="alert">${this.bootError}</p>
           ${this.bootStatus === 'error' ? html`<button class="text-button" @click=${() => this.boot()}>Повторить</button>` : nothing}` : nothing}
@@ -481,6 +541,7 @@ class LearnApp extends LitElement {
         <button class="text-button" @click=${() => this.go('projects')}>Проекты</button>
       </div>` : nothing}
       <section class="profile-metal" aria-label="Профиль" tabindex="0"
+        @pointermove=${(event) => this.tiltCard(event)} @pointerleave=${(event) => this.resetCard(event)}
         @click=${() => { this.profileFlipped = !this.profileFlipped; }}
         @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.profileFlipped = !this.profileFlipped; } }}>
         <div class=${'profile-metal-inner' + (this.profileFlipped ? ' is-flipped' : '')}>

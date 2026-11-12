@@ -243,14 +243,17 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         let to;
         let reached = false;
         if (key === 'soft') {
+          // Ментор ставит софт в процентах. Старые записи хранили оценку 1–5, она читается как score * 20.
           const reason = lowerText(data.reason, 180);
-          requireInput(profile.soft && index < 10 && score >= 1 && score <= 5 && reason);
+          requireInput(profile.soft && index < 10 && score >= 0 && score <= 100);
           profile.mentorScores ??= {};
           const previous = profile.mentorScores[index];
-          from = previous ? previous.score * 20 : profile.soft[index];
-          to = score * 20;
-          const history = previous ? [...(previous.history ?? []), { score: previous.score, reason: previous.reason, updatedAt: previous.updatedAt }] : [];
-          profile.mentorScores[index] = { score, reason, updatedAt: new Date().toISOString(), history };
+          from = previous ? previous.percent ?? previous.score * 20 : profile.soft[index];
+          to = score;
+          const history = previous ? [...(previous.history ?? []), {
+            percent: previous.percent ?? previous.score * 20, reason: previous.reason, updatedAt: previous.updatedAt,
+          }] : [];
+          profile.mentorScores[index] = { percent: score, reason, updatedAt: new Date().toISOString(), history };
         } else {
           const group = Number.isInteger(key) ? profile.hard?.[key] : null;
           requireInput(group && index < group.levels.length && score >= 0 && score <= 100);

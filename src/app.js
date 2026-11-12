@@ -358,6 +358,29 @@ class LearnApp extends LitElement {
     }
   }
 
+  // Ментор правит процент навыка прямо в списке. Сохранение сразу, при ошибке поле возвращается к прежнему значению.
+  async savePercent(event, key, index) {
+    const field = event.currentTarget;
+    const score = Number(field.value);
+    if (field.value === '' || !Number.isInteger(score) || score < 0 || score > 100) {
+      this.formError = 'Процент от 0 до 100.';
+      field.value = field.defaultValue;
+      return;
+    }
+    field.disabled = true;
+    try {
+      const { reached } = await this.mutate('score', { key, index, score });
+      if (reached) this.celebration = { person: this.personId, key };
+      this.formError = '';
+      await this.refresh();
+    } catch (error) {
+      this.formError = error.message;
+      field.value = field.defaultValue;
+    } finally {
+      field.disabled = false;
+    }
+  }
+
   async loadCode() {
     try {
       this.accessCode = (await request('/access-code')).code;
@@ -659,7 +682,7 @@ class LearnApp extends LitElement {
   softLevels() {
     return (this.person.soft ?? emptySoft).map((level, index) => {
       const assessment = this.person.mentorScores?.[index];
-      return assessment ? assessment.score * 20 : level;
+      return assessment ? assessment.percent ?? assessment.score * 20 : level;
     });
   }
 
@@ -830,6 +853,7 @@ class LearnApp extends LitElement {
         <div><h1>Навыки</h1><p>${this.person.name}</p></div>
         ${this.role === 'mentor' ? html`<button class="primary" @click=${() => this.open({ type: 'hard' })}>+ Круг хардов</button>` : nothing}
       </div>
+      ${this.formError && !this.modal ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
       <div class="skill-grid">
         ${this.skillCard('Софты', softSkills, this.softLevels(), 'green', 'soft')}
         ${repeat(this.person.hard, (group, index) => index, (group, index) => this.skillCard('Харды', group.skills, group.levels, 'purple', index, group.name))}
@@ -853,12 +877,15 @@ class LearnApp extends LitElement {
         <li class=${edit ? 'editable' : ''}><button aria-pressed=${selected === index} @click=${() => {
           this.selections = { ...this.selections, [key]: selected === index ? -1 : index };
         }}>
-          <span class="legend-dot" aria-hidden="true"></span><span>${label}</span><strong>${levels[index] === null ? 'Нет оценки' : levels[index] + '%'}</strong>
+          <span class="legend-dot" aria-hidden="true"></span><span>${label}</span>${edit ? nothing : html`<strong>${levels[index] === null ? 'Нет оценки' : levels[index] + '%'}</strong>`}
         </button>
-        ${edit ? html`<button class="edit-skill" aria-label=${'Оценить ' + label} @click=${() => this.open({ type: 'score', key, index, label })}>✎</button>` : nothing}
+        ${edit ? html`<label class="skill-percent"><input type="number" min="0" max="100" step="1" inputmode="numeric"
+          aria-label=${'Процент: ' + label} .value=${levels[index] === null ? '' : String(levels[index])}
+          .defaultValue=${levels[index] === null ? '' : String(levels[index])}
+          @change=${(event) => this.savePercent(event, key, index)}>%</label>` : nothing}
         ${key === 'soft' && selected === index && this.person.soft ? html`<p class="skill-note detail">
           Оценка теста: ${this.person.soft[index]}%.
-          ${this.person.mentorScores?.[index] ? html` Оценка ментора: ${this.person.mentorScores[index].score}/5. ${this.person.mentorScores[index].reason}` : nothing}
+          ${this.person.mentorScores?.[index] ? html` Оценка ментора: ${this.person.mentorScores[index].percent ?? this.person.mentorScores[index].score * 20}%. ${this.person.mentorScores[index].reason ?? ''}` : nothing}
         </p>` : nothing}
         </li>`)}</ul>
     </section>`;
@@ -1112,11 +1139,9 @@ class LearnApp extends LitElement {
     const { type, task, project, key, index, label, step } = this.modal;
     const title = {
       hard: 'Новый круг хардов', title: 'Роль на карточке', create: 'Новая задача', move: 'Перенести задачу',
-      photo: 'Добавить фото', score: label,
+      photo: 'Добавить фото',
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
     }[type];
-    const previousScore = this.person.mentorScores?.[index];
-    const softScore = key === 'soft';
     return html`
       <div class="dialog-top"><h2 id="dialog-title" tabindex="-1">${title}</h2><button class="round" type="button" aria-label="Закрыть" ?disabled=${this.formBusy} @click=${() => this.querySelector('dialog').close()}>×</button></div>
       <form autocapitalize="none" @submit=${(event) => this.save(event)}>
@@ -1153,17 +1178,6 @@ class LearnApp extends LitElement {
           : type === 'photo' ? html`
             <label>Фото процесса<input name="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" required></label>
             <label>Подпись<input name="caption" maxlength="120" placeholder="Над чем работаешь?"></label>`
-          : type === 'score' && softScore ? html`
-            <p>Примерная оценка теста: ${this.person.soft[index]}%</p>
-            <label>Оценка ментора<select name="score" required>
-              ${[
-                'Редко, даже с поддержкой', 'С подсказками', 'Устойчиво в типовых ситуациях',
-                'Самостоятельно в сложных ситуациях', 'Переносит навык в новые ситуации и помогает другим',
-              ].map((label, index) => html`<option value=${index + 1} ?selected=${(previousScore?.score ?? 3) === index + 1}>${index + 1}. ${label}</option>`)}
-            </select></label>
-            <label>Что ты заметил в работе?<input name="reason" required maxlength="180" .value=${previousScore?.reason ?? ''}></label>`
-          : type === 'score' ? html`
-            <label>Уровень от 0 до 100<input name="score" type="number" min="0" max="100" step="1" required .value=${String(this.person.hard[key].levels[index])}></label>`
           : html`
             ${type === 'create' ? html`<label>Задача<input name="title" required maxlength="100"></label>` : html`<p>${task.title}</p>`}
             <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.date}></label>
@@ -1212,9 +1226,6 @@ class LearnApp extends LitElement {
         }
         await this.mutate('photo', { mime: file.type, contents: await encodePhoto(file), caption: value('caption') });
         this.photoError = '';
-      } else if (type === 'score') {
-        const { reached } = await this.mutate('score', { key, index, score: Number(value('score')), reason: value('reason') });
-        if (reached) this.celebration = { person: this.personId, key };
       } else if (type === 'new-project') {
         await this.mutate('project', {
           name: value('name'), description: value('description'), folder: value('folder'), links: Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => ({

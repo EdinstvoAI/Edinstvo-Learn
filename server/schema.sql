@@ -42,7 +42,8 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_day date;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_day date;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_time time;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
-UPDATE tasks SET start_day = COALESCE(start_day, day), end_day = COALESCE(end_day, day), end_time = COALESCE(end_time, time);
+UPDATE tasks SET start_day = COALESCE(start_day, day), end_day = COALESCE(end_day, day), end_time = COALESCE(end_time, time)
+WHERE start_day IS NULL OR end_day IS NULL OR end_time IS NULL;
 
 UPDATE accounts AS account
 SET profile = jsonb_set(profile, '{projects}', (

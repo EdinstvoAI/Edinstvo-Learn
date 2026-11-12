@@ -1,33 +1,12 @@
-import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { openDatabase } from './database.js';
 import { scoreAssessment } from './assessment.js';
+import { ApiError, allowed, lowerText, projectSources, requireInput, shortText, taskSchedule, uuid } from './input.js';
+import { accessCode as dailyCode, hash, safeEqual, telegramPhone, telegramUser } from './telegram.js';
 
-const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const folderNames = new Set('grass fur cheese leopard turf chrome gel vinyl terrazzo nylon corduroy foil gingham cactus cloud'.split(' '));
 const photoTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif']);
 const token = () => randomBytes(32).toString('hex');
-const hash = (value) => createHash('sha256').update(value).digest('hex');
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-const validDate = (value) => typeof value === 'string' && datePattern.test(value) &&
-  Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-const lowerText = (value, max) => typeof value === 'string' ? value.trim().toLowerCase().slice(0, max) : '';
-const shortText = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
-
-class ApiError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-
-function requireInput(valid, message = 'Проверь введённые данные.') {
-  if (!valid) throw new ApiError(422, message);
-}
-
-function allowed(valid) {
-  if (!valid) throw new ApiError(403, 'У этого аккаунта нет доступа.');
-}
 
 async function bodyOf(request) {
   const chunks = [];
@@ -51,45 +30,8 @@ function json(response, status, data) {
   response.end(JSON.stringify(data));
 }
 
-function safeEqual(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  return timingSafeEqual(Buffer.from(hash(a), 'hex'), Buffer.from(hash(b), 'hex'));
-}
-
-function telegramParams(initData, botToken) {
-  if (!botToken || typeof initData !== 'string' || initData.length > 8192) return null;
-  const params = new URLSearchParams(initData);
-  const signature = params.get('hash');
-  params.delete('hash');
-  params.sort();
-  const data = [...params].map(([key, value]) => key + '=' + value).join('\n');
-  const secret = createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const expected = createHmac('sha256', secret).update(data).digest('hex');
-  const age = Date.now() / 1000 - Number(params.get('auth_date'));
-  if (!safeEqual(signature, expected) || !Number.isFinite(age) || age > 600 || age < -30) return null;
-  return params;
-}
-
-function telegramUser(initData, botToken) {
-  try {
-    const user = JSON.parse(telegramParams(initData, botToken)?.get('user') ?? 'null');
-    if (!user) return null;
-    if (!Number.isSafeInteger(user.id) || user.id < 1) return null;
-    const name = shortText([user.first_name, user.last_name].filter(Boolean).join(' '), 100);
-    let photoUrl = null;
-    if (typeof user.photo_url === 'string' && user.photo_url.length <= 2048) {
-      const url = URL.parse(user.photo_url);
-      if (url?.protocol === 'https:' && !url.username && !url.password) photoUrl = url.href;
-    }
-    const username = typeof user.username === 'string' && /^[a-zA-Z0-9_]{1,32}$/.test(user.username) ? user.username : null;
-    return name ? { id: String(user.id), name, photoUrl, username } : null;
-  } catch {
-    return null;
-  }
-}
-
-export function makeApi(env) {
-  const database = env.DATABASE_URL ? openDatabase(env.DATABASE_URL) : null;
+// database можно передать снаружи, чтобы проверять маршруты без PostgreSQL.
+export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATABASE_URL) : null) {
   const allowLocal = Boolean(env.LOCAL_SETUP_TOKEN) && !env.PUBLIC_ORIGIN;
   const cookiePolicy = env.PUBLIC_ORIGIN?.startsWith('https://')
     ? 'SameSite=None; Secure; Partitioned'
@@ -114,13 +56,9 @@ export function makeApi(env) {
     return result.rows[0] ?? null;
   }
 
-  const accessDay = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Volgograd' });
-
   function accessCode(mentorId) {
     if (!env.ACCESS_CODE_SECRET) throw new ApiError(503, 'Код доступа ещё не настроен.');
-    const day = accessDay.format(new Date());
-    const value = createHmac('sha256', env.ACCESS_CODE_SECRET).update(mentorId + ':' + day).digest();
-    return String(value.readUInt32BE(0) % 1_000_000).padStart(6, '0');
+    return dailyCode(env.ACCESS_CODE_SECRET, mentorId);
   }
 
   async function unlock(actor, code) {
@@ -239,33 +177,6 @@ export function makeApi(env) {
     };
   }
 
-  function projectSources(data) {
-    const sources = [];
-    const links = Array.isArray(data.links) ? data.links : [];
-    for (const item of links.slice(0, 3)) {
-      if (!item?.name && !item?.url) continue;
-      const type = lowerText(item.name, 70);
-      requireInput(type && typeof item.url === 'string', 'Заполни название и ссылку.');
-      let url;
-      try { url = new URL(item.url); } catch { throw new ApiError(422, 'Проверь ссылку.'); }
-      requireInput(url.protocol === 'https:' && !url.username && !url.password, 'Ссылка должна начинаться с https://.');
-      sources.push({ type, url: url.href });
-    }
-    if (sources.length) return sources;
-    for (const [type, raw, domains] of [
-      ['github', data.github, ['github.com', 'www.github.com']],
-      ['figma', data.figma, ['figma.com', 'www.figma.com']],
-    ]) {
-      if (!raw) continue;
-      let url;
-      try { url = new URL(raw); } catch { throw new ApiError(422, 'Проверь ссылку ' + type + '.'); }
-      requireInput(url.protocol === 'https:' && domains.includes(url.hostname) && !url.username && !url.password,
-        'Проверь ссылку ' + type + '.');
-      sources.push({ type, url: url.href });
-    }
-    return sources;
-  }
-
   async function mutate(actor, person, action, data) {
     return database.transaction(async (client) => {
       const row = (await client.query(`
@@ -282,13 +193,9 @@ export function makeApi(env) {
         profile.soft = levels;
       } else if (action === 'telegram-contact') {
         allowed(!mentor && row.telegram_id);
-        const signed = telegramParams(data.contact, env.TELEGRAM_BOT_TOKEN);
-        let contact;
-        try { contact = JSON.parse(signed?.get('contact') ?? 'null'); } catch { contact = null; }
-        const number = contact?.phone_number;
-        requireInput(contact && String(contact.user_id) === row.telegram_id && typeof number === 'string' &&
-          /^\+?[1-9]\d{6,14}$/.test(number), 'Telegram не подтвердил номер.');
-        profile.phone = '+' + number.replace(/^\+/, '');
+        const phone = telegramPhone(data.contact, env.TELEGRAM_BOT_TOKEN, row.telegram_id);
+        requireInput(phone, 'Telegram не подтвердил номер.');
+        profile.phone = phone;
       } else if (action === 'layers') {
         allowed(!mentor);
         requireInput(['sky', 'mint', 'violet'].includes(data.cover));
@@ -366,12 +273,10 @@ export function makeApi(env) {
           'Выбери проект этого ученика.');
         if (action === 'create-task') {
           const title = lowerText(data.title, 100);
-          const startDate = data.startDate || data.date;
-          const endDate = data.endDate || startDate;
-          const endTime = data.endTime || data.time;
-          requireInput(title && validDate(startDate) && validDate(endDate) && startDate <= endDate && timePattern.test(data.time) && timePattern.test(endTime) && (startDate < endDate || endTime >= data.time));
+          const { startDate, endDate, time, endTime } = taskSchedule(data);
+          requireInput(title);
           await client.query('INSERT INTO tasks (person, title, day, start_day, end_day, time, end_time, movable, project_id) VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8)',
-            [person, title, startDate, endDate, data.time, endTime, !mentor || data.movable === true, projectId]);
+            [person, title, startDate, endDate, time, endTime, !mentor || data.movable === true, projectId]);
         } else {
           requireInput(typeof data.id === 'string' && uuid.test(data.id));
           const update = await client.query('UPDATE tasks SET project_id = $1 WHERE id = $2 AND person = $3 AND ($4 OR movable)',
@@ -380,17 +285,15 @@ export function makeApi(env) {
         }
         return {};
       } else if (action === 'move-task') {
-        const startDate = data.startDate || data.date;
-        const endDate = data.endDate || startDate;
-        const endTime = data.endTime || data.time;
-        requireInput(validDate(startDate) && validDate(endDate) && startDate <= endDate && timePattern.test(data.time) && timePattern.test(endTime) && (startDate < endDate || endTime >= data.time) && typeof data.id === 'string' && uuid.test(data.id));
+        requireInput(typeof data.id === 'string' && uuid.test(data.id));
+        const { startDate, endDate, time, endTime } = taskSchedule(data);
         const projectId = data.projectId || null;
         requireInput(!projectId || (profile.projects ?? []).some((project) => project.id === projectId),
           'Выбери проект этого ученика.');
         const update = await client.query(`UPDATE tasks SET day = $1, start_day = $1, end_day = $2, time = $3, end_time = $4,
           project_id = CASE WHEN $7 THEN $8 ELSE project_id END
           WHERE id = $5 AND person = $6 AND NOT done AND ($9 OR movable)`,
-          [startDate, endDate, data.time, endTime, data.id, person, Object.hasOwn(data, 'projectId'), projectId, mentor]);
+          [startDate, endDate, time, endTime, data.id, person, Object.hasOwn(data, 'projectId'), projectId, mentor]);
         allowed(update.rowCount);
         return {};
       } else {

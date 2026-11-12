@@ -18,3 +18,4 @@
 - [public/edinstvo-wordmark.svg](../public/edinstvo-wordmark.svg), [public/learn-wordmark.svg](../public/learn-wordmark.svg) — экспорт слоёв логотипа из Figma.
 
 - [src/skill-growth.js](../src/skill-growth.js) связывает сцену Lottie с сектором менти, [src/project-folders.js](../src/project-folders.js) задаёт каталог обложек, [server/start.js](../server/start.js) обслуживает сборку и API в Docker.
+- [server/input.js](../server/input.js) проверяет входные данные API, [server/telegram.js](../server/telegram.js) проверяет подписи Telegram и считает суточный код. [src/schedule.js](../src/schedule.js) держит даты календаря, фильтры и порядок вариантов теста. Юнит-тесты лежат в [test](../test), запуск `npm test`.

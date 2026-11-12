@@ -1,9 +1,9 @@
 import { LitElement, css, html } from 'lit';
-import { cheerScene, finaleCover, finaleScene } from './lottie-scenes.js';
+import { burstScene, finaleCover, finaleScene } from './lottie-scenes.js';
 
 let library;
 
-// kind: cheer — после 9-го вопроса, strong — после 20-го, finale — переход к результату.
+// kind: cheer — влёт на рубеже теста, strong — усиленный после 20-го вопроса, finale — переход к результату.
 // При уменьшенном движении сцена не играет, а события cover и end приходят сразу.
 class AssessmentScene extends LitElement {
   static properties = { kind: { type: String } };
@@ -34,8 +34,8 @@ class AssessmentScene extends LitElement {
       if (!this.isConnected) return;
       this.animation = lottie.loadAnimation({
         container: this.renderRoot.querySelector('div'), renderer: 'canvas', loop: false, autoplay: false,
-        animationData: finale ? finaleScene(objects) : cheerScene(this.kind === 'strong'),
-        rendererSettings: { preserveAspectRatio: finale ? 'xMidYMid slice' : 'xMidYMid meet' },
+        animationData: finale ? finaleScene(objects) : burstScene(this.kind === 'strong'),
+        rendererSettings: { preserveAspectRatio: 'xMidYMid slice' },
       });
       let covered = false;
       this.animation.addEventListener('enterFrame', ({ currentTime }) => {

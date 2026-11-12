@@ -11,14 +11,15 @@ function keyframes(frames) {
   })) };
 }
 
-function burst(color, compact, orbit) {
+function burst(color, compact, orbit, confetti) {
   const palette = color === 'purple'
     ? [[0.59, 0.34, 0.95], [0.85, 0.65, 1], [0.43, 0.3, 0.89]]
+    : color === 'ink' ? [[0.09, 0.09, 0.09], [0.38, 0.38, 0.38], [0.63, 0.63, 0.63]]
     : [[0.39, 0.68, 0.2], [0.68, 0.89, 0.26], [0.26, 0.6, 0.47]];
   return {
     v: '5.13.0', fr: 60, ip: 0, op: compact ? 38 : 92, w: 280, h: 280, assets: [],
     layers: [
-      ...(!compact && !orbit ? [wave(palette[0]), checkmark(palette[2])] : []),
+      ...(!compact && !orbit && !confetti ? [wave(palette[0]), checkmark(palette[2])] : []),
       ...palette.flatMap((fill, ring) => Array.from({ length: orbit ? 2 : compact ? 4 : 7 }, (_, index) => {
       const angle = (index / (orbit ? 3 : 7) + ring / 9) * Math.PI * 2;
       const point = (distance) => [140 + Math.cos(angle) * distance, 140 + Math.sin(angle) * distance, 0];
@@ -31,7 +32,9 @@ function burst(color, compact, orbit) {
           s: keyframes([[0, [5, 5, 100]], [19, [100, 100, 100]], [72, [25, 25, 100]]]),
         },
         shapes: [
-          { ty: 'el', p: property([0, 0]), s: property(compact ? [9, 9] : [13 + ring * 6, index % 2 ? 13 : 27]) },
+          confetti
+            ? { ty: 'rc', p: property([0, 0]), s: property([9 + ring * 3, index % 2 ? 13 : 24]), r: property(1) }
+            : { ty: 'el', p: property([0, 0]), s: property(compact ? [9, 9] : [13 + ring * 6, index % 2 ? 13 : 27]) },
           { ty: 'fl', c: property([...fill, 1]), o: property(100), r: 1 },
           { ty: 'el', p: property([-2, -4]), s: property([5, 4]) },
           { ty: 'fl', c: property([1, 1, 1, 1]), o: property(55), r: 1 },
@@ -107,7 +110,7 @@ function eraserScene() {
 }
 
 class SkillCelebration extends LitElement {
-  static properties = { color: { type: String }, compact: { type: Boolean }, orbit: { type: Boolean }, eraser: { type: Boolean } };
+  static properties = { color: { type: String }, compact: { type: Boolean }, orbit: { type: Boolean }, eraser: { type: Boolean }, confetti: { type: Boolean }, fly: { type: Boolean } };
   static styles = css`
     :host { display: block; pointer-events: none; }
     div { width: 100%; height: 100%; }
@@ -121,9 +124,19 @@ class SkillCelebration extends LitElement {
     if (!this.isConnected) return;
     this.animation = lottie.loadAnimation({
       container: this.renderRoot.querySelector('div'), renderer: 'canvas',
-      animationData: this.eraser ? eraserScene() : burst(this.color, this.compact, this.orbit),
-      loop: false, autoplay: true,
+      animationData: this.eraser ? eraserScene() : burst(this.color, this.compact, this.orbit, this.confetti),
+      loop: false, autoplay: false,
     });
+    const text = this.fly ? this.previousElementSibling : null;
+    if (text) {
+      this.animation.addEventListener('enterFrame', ({ currentTime }) => {
+        const progress = Math.min(1, currentTime / 24);
+        const remaining = (1 - progress) ** 3;
+        text.style.transform = `translate3d(${remaining * 30}px, ${remaining * 18}px, 0) rotate(${remaining * 6}deg)`;
+        text.style.opacity = String(Math.min(1, progress * 3));
+      });
+    }
+    this.animation.play();
   }
 
   disconnectedCallback() {

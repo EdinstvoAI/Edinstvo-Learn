@@ -276,7 +276,8 @@ mentor-note { display: block; }
   backdrop-filter: blur(4px);
 }
 .home-summary p { margin: 0; font-size: clamp(18px, 5.6vw, 24px); line-height: 1.24; font-weight: 550; }
-.home-summary p span:first-child { color: var(--screen-muted); }
+.student-home .home-summary p { color: #101010; }
+.home-summary .summary-muted { color: #777; }
 .home-summary img { display: inline-block; vertical-align: -.25em; object-fit: contain; }
 .home-inner-sheet {
   position: relative;
@@ -392,9 +393,9 @@ mentor-note { display: block; }
   border-radius: 28px;
   background: #f6f6f8;
 }
-.student-shell .assessment progress { accent-color: #9b82d7; }
+.student-shell .assessment progress { accent-color: #181818; }
 .student-shell .assessment .answer-list button { background: #fff; }
-.student-shell .assessment .answer-list button[aria-pressed=true] { background: #e8defa; }
+.student-shell .assessment .answer-list button[aria-pressed=true] { background: #181818; color: #fff; }
 .sign-in { width: min(100%, 402px); }
 
 .student-shell, .student-shell :is(h1, h2, h3, p, small, strong, button, input, textarea, select) { letter-spacing: -.07em; }
@@ -460,7 +461,6 @@ mentor-note { display: block; }
 .calendar-next strong, .calendar-next time { display: block; }
 .next-day { font: 25px/1 'Martian Mono', monospace; letter-spacing: -.07em; }
 .student-shell :is(.calendar-card, .agenda) { background: #fff; }
-.calendar-top { text-transform: capitalize; }
 .calendar-top h2 { font-size: 18px; }
 .calendar-date {
   position: relative;
@@ -479,7 +479,7 @@ mentor-note { display: block; }
 .student-shell .week button { background: #f7f7f9; min-height: 60px; }
 .student-shell .week button[aria-current=date]:not([aria-pressed=true]) { color: #69459c; background: #f3eafa; }
 .calendar-agenda-title { margin: 14px 2px 8px; }
-.calendar-agenda-title h2 { font-size: 19px; text-transform: capitalize; }
+.calendar-agenda-title h2 { font-size: 19px; }
 .calendar-agenda-title .primary { min-height: 42px; flex: none; padding-inline: 12px; }
 .agenda-row .round { border: 0; width: auto; min-height: 38px; padding-inline: 8px; background: #f3f0f7; font-size: 12px; }
 
@@ -523,14 +523,14 @@ mentor-note { display: block; }
 .folder-options label:focus-within { outline: 2px solid #745abc; }
 .project-back { justify-self: start; }
 
-.student-shell[data-page=assessment] .assessment { background: #f7f6f8; }
+.student-shell[data-page=assessment] .assessment { background: #f7f7f7; }
 .assessment-cover { text-align: center; }
-.assessment-emblem { position: relative; display: grid; place-items: center; width: 136px; height: 136px; margin: 0 auto 15px; border-radius: 50%; background: #ebe2f8; }
+.assessment-emblem { position: relative; display: grid; place-items: center; width: 136px; height: 136px; margin: 0 auto 15px; border-radius: 50%; background: #ededed; }
 .assessment-emblem img { width: 68px; }
 .assessment-emblem skill-celebration { position: absolute; inset: -22px; }
 .assessment-progress { display: flex; align-items: center; justify-content: space-between; }
 .assessment-progress strong { font: 13px/1.4 'Martian Mono', monospace; }
-.assessment .encouragement { display: flex; min-height: 64px; position: relative; background: #e9ddfa; color: #302744; }
+.assessment .encouragement { display: flex; min-height: 64px; position: relative; background: #1c1c1c; color: #fff; }
 .assessment .encouragement p { margin: 0; color: inherit; }
 .assessment .encouragement img { width: 30px; height: auto; }
 .assessment-question { animation: page-rise .26s ease-out both; }
@@ -587,8 +587,6 @@ mentor-note { display: block; }
   }
 }
 
-.calendar-top, .calendar-agenda-title h2 { text-transform: none; }
-.calendar-top h2::first-letter, .calendar-agenda-title h2::first-letter { text-transform: uppercase; }
 .agenda-empty { margin: 0; padding: 12px 14px; background: #fff; color: #686572; border-radius: 16px; font-size: 14px; }
 .project-folders {
   grid-template-columns: repeat(2, minmax(0, 153px));
@@ -665,8 +663,9 @@ mentor-note { display: block; }
 .profile-portrait .avatar-image {
   position: relative;
   inset: auto;
-  width: 130px;
-  height: 130px;
+  width: clamp(148px, 46vw, 176px);
+  aspect-ratio: 1;
+  height: auto;
   z-index: auto;
   border-radius: 50%;
   background: #f3f3f3;
@@ -675,8 +674,28 @@ mentor-note { display: block; }
 .profile-portrait img { object-position: center; }
 .profile-portrait h1 { margin: 10px 0 2px; font-size: 29px; text-align: center; overflow-wrap: anywhere; }
 .profile-contact { display: flex; justify-content: center; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: #696871; font-size: 13px; }
-.memories { margin: 20px auto 0; text-align: center; }
-.memories h2 { margin: 0; font-size: 19px; }
-.memories .photo-grid { margin-top: 10px; text-align: left; grid-template-columns: repeat(2,minmax(0,1fr)); }
-.memories .photo-grid figure { min-width: 0; }
-.memories .photo-grid img { border-radius: 12px; }
+.memories { margin: 30px auto 0; }
+.memories-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.memories h2 { margin: 0; font-size: 24px; }
+.memories-header button { flex: none; color: #252525; background: #f2f2f2; border-radius: 99px; padding-inline: 12px; }
+.memories .photo-grid { margin-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 9px; }
+.memories figure:first-child { grid-column: 1 / -1; }
+.memories figure:first-child img { aspect-ratio: 1.58; }
+.memories figure img { border-radius: 14px; }
+.memories figcaption { padding-inline: 2px; overflow-wrap: anywhere; }
+.memories figcaption p { margin: 0; color: #222; }
+.memories-empty { margin: 10px 0 0; padding: 18px 14px; border-radius: 14px; background: #f9f9f9; color: #5f5f5f; }
+.avatar-image img[hidden] { display: none; }
+
+.student-shell[data-page=projects] .screen::before { background: #fff; }
+.student-home .home-inner-sheet { background: #fafafa; margin-top: 0; }
+.student-shell .assessment .primary { background: #181818; color: #fff; }
+.student-shell .assessment .primary:disabled { opacity: .45; }
+.assessment .encouragement { overflow: hidden; }
+.assessment .encouragement strong { display: block; }
+.assessment .encouragement img { filter: grayscale(1) brightness(1.35); }
+.assessment-emblem skill-celebration[confetti] { inset: -44px; }
+
+learn-app { text-transform: lowercase; }
+learn-app :is(input, textarea, select, pre, code) { text-transform: none; }
+learn-app .calendar-top h2::first-letter, learn-app .calendar-agenda-title h2::first-letter { text-transform: lowercase; }

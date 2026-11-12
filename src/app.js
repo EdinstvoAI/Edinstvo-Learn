@@ -426,6 +426,8 @@ class LearnApp extends LitElement {
   home() {
     const note = Object.values(this.person.mentorScores ?? {}).some((entry) => entry.reason);
     const firstName = this.account.name.split(/\s+/)[0];
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'доброе утро' : hour < 18 ? 'добрый день' : 'добрый вечер';
     const active = this.personTasks.filter((task) => !task.done).length;
     const plural = new Intl.PluralRules('ru').select(active);
     const taskLabel = { one: 'активная задача', few: 'активные задачи', many: 'активных задач' }[plural];
@@ -436,8 +438,8 @@ class LearnApp extends LitElement {
           <h1>${firstName}</h1>
         </header>
         <section class="home-summary" aria-label="Сводка">
-          <p><span>привет,</span> <img src="/mobile-home/star.png" alt="" width="30" height="29"> ${firstName}</p>
-          <p><span>у тебя</span> <span aria-hidden="true">📅</span> ${active ? active + ' ' + taskLabel : 'пока нет задач'}</p>
+          <p><span class="summary-muted">${greeting},</span> <img src="/mobile-home/star.png" alt="" width="30" height="29"> <strong>${firstName}</strong></p>
+          <p><span class="summary-muted">у тебя</span> <span aria-hidden="true">📅</span> <strong>${active ? active + ' ' + taskLabel : 'пока нет задач'}</strong></p>
           ${note ? html`<p><span aria-hidden="true">💬</span> комментарий ментора</p>` : nothing}
         </section>
         <div class="home-inner-sheet">
@@ -471,13 +473,19 @@ class LearnApp extends LitElement {
         ${this.contactError ? html`<p class="form-error" role="alert">${this.contactError}</p>` : nothing}
       </header>
       <section class="profile-lower memories" aria-labelledby="memories-title">
-        <h2 id="memories-title">Воспоминания</h2>
-        ${this.role === 'mentee' ? html`<button class="text-button" @click=${() => this.open({ type: 'photo' })}>Добавить фото</button>` : nothing}
+        <header class="memories-header">
+          <h2 id="memories-title">Воспоминания</h2>
+          ${this.role === 'mentee' ? html`<button class="text-button" @click=${() => this.open({ type: 'photo' })}>Добавить фото</button>` : nothing}
+        </header>
         ${photos.length ? html`<div class="photo-grid">${photos.map((photo) => html`<figure>
-          <img src=${photo.url} alt=${photo.caption || 'Фото рабочего процесса'}>
-          <figcaption><time datetime=${photo.date}>${dayLabel.format(parseDate(photo.date))}</time>${photo.caption ? html`<br>${photo.caption}` : nothing}</figcaption>
-          ${this.role === 'mentee' ? html`<button class="text-button" @click=${() => this.removePhoto(photo)}>Удалить</button>` : nothing}
-        </figure>`)}</div>` : html`<p class="empty">Здесь будут фотографии рабочего процесса.</p>`}
+          <img src=${photo.url} alt=${photo.caption || 'Фото рабочего процесса'} loading="lazy">
+          <figcaption>
+            ${photo.caption ? html`<p>${photo.caption}</p>` : nothing}
+            <time datetime=${photo.date}>${dayLabel.format(parseDate(photo.date))}</time>
+          </figcaption>
+          ${this.role === 'mentee' ? html`<button class="text-button" aria-label=${'Удалить фото от ' + dayLabel.format(parseDate(photo.date))}
+            @click=${() => this.removePhoto(photo)}>Удалить</button>` : nothing}
+        </figure>`)}</div>` : html`<p class="memories-empty">Здесь будут фотографии рабочего процесса.</p>`}
         ${this.photoError ? html`<p class="form-error photo-error" role="alert">${this.photoError}</p>` : nothing}
       </section>`;
   }
@@ -727,7 +735,7 @@ class LearnApp extends LitElement {
       return html`<section class="assessment assessment-cover">
         <div class="assessment-emblem">
           <img src="/mobile-home/star.png" alt="">
-          <skill-celebration color=${status === 'intro' ? 'purple' : 'green'} ?orbit=${status === 'intro'}></skill-celebration>
+          <skill-celebration color="ink" ?orbit=${status === 'intro'} ?confetti=${status === 'done'}></skill-celebration>
         </div>
         <h1>${status === 'intro' ? 'Начнём с софтов?' : 'Готово, молодец!'}</h1>
         ${status === 'intro' ? html`<p>30 ситуаций, примерно 10–15 минут. Выбирай вариант, который ближе к тому, как ты обычно поступаешь.</p>
@@ -747,8 +755,8 @@ class LearnApp extends LitElement {
       </div>
       <progress aria-label="Отвечено вопросов" max=${questions.length} value=${this.answers.length}></progress>
       ${checkpoint ? keyed(remaining, html`<div class="encouragement" role="status"><img src="/mobile-home/star.png" alt="">
-        <p>${remaining === 10 ? 'Ещё чуть-чуть!' : 'Отлично идёшь!'} Осталось ${remaining} вопросов.</p>
-        <skill-celebration color="purple" compact></skill-celebration></div>`) : nothing}
+        <p>${remaining === 10 ? 'Ещё чуть-чуть!' : 'Отлично идёшь!'} <strong>Осталось ${remaining} вопросов.</strong></p>
+        <skill-celebration color="ink" compact ?fly=${remaining === 10}></skill-celebration></div>`) : nothing}
       ${question ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${question.answers.map((answer, index) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
       </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}

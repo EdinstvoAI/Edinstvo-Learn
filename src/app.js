@@ -6,6 +6,7 @@ import '@edinstvo/glass/glass.css';
 import './skill-chart.js';
 import './skill-growth.js';
 import './celebration.js';
+import './assessment-scene.js';
 import './home-backdrop.js';
 import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
@@ -55,6 +56,7 @@ class LearnApp extends LitElement {
     pendingAnswer: { state: true },
     assessmentPause: { state: true },
     assessmentStatus: { state: true },
+    finale: { state: true },
     formError: { state: true },
     celebration: { state: true },
     growth: { state: true },
@@ -89,6 +91,7 @@ class LearnApp extends LitElement {
     this.pendingAnswer = null;
     this.assessmentPause = 0;
     this.assessmentStatus = 'intro';
+    this.finale = false;
     this.playedGrowth = new Set();
     this.formError = '';
     this.celebration = null;
@@ -463,6 +466,8 @@ class LearnApp extends LitElement {
         <div class="student-scroll" @scroll=${this.onPageScroll}>${content}</div>
         ${showDock ? html`<footer class="student-dock">${this.nav()}</footer>` : nothing}
       </div>` : content}
+      ${this.finale ? html`<assessment-scene class="assessment-finale" kind="finale"
+        @scene-cover=${() => { this.assessmentStatus = 'done'; }} @scene-end=${() => { this.finale = false; }}></assessment-scene>` : nothing}
       <dialog aria-labelledby="dialog-title" @cancel=${(event) => {
         if (this.formBusy) event.preventDefault();
       }} @close=${() => { this.modal = null; }}>${this.modal ? this.modalContent() : nothing}</dialog>`;
@@ -847,12 +852,15 @@ class LearnApp extends LitElement {
       <div class="assessment-segments" aria-label=${`Отвечено вопросов: ${this.answers.length} из ${questions.length}`}>
         ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
       </div>
-      ${checkpoint ? keyed(remaining, html`<div class="encouragement" role="status"><img src="/mobile-home/star.png" alt="">
-        <p>${remaining <= 5 ? 'Молодец, финальный рывок!' : 'Отлично идёшь!'}</p>
-        <skill-celebration color="ink" compact ?fly=${remaining === 10 || remaining === 5} ?confetti=${remaining === 5}></skill-celebration></div>`) : nothing}
+      ${checkpoint ? keyed(this.assessmentPause, html`<div class="encouragement" role="status"><img src="/mobile-home/star.png" alt="">
+        <p>${{ 9: 'Молодец, отлично идёшь!', 20: 'Две трети позади, так держать!' }[this.assessmentPause] ?? 'Молодец, финальный рывок!'}</p>
+        ${this.assessmentPause === 9 || this.assessmentPause === 20 ? nothing
+          : html`<skill-celebration color="ink" compact fly confetti></skill-celebration>`}</div>
+        ${this.assessmentPause === 9 || this.assessmentPause === 20
+          ? html`<assessment-scene class="encouragement-scene" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}></assessment-scene>` : nothing}`) : nothing}
       ${question && !this.assessmentPause ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
-      </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
+      </div></div>`) : checkpoint ? nothing : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
       ${status === 'error' ? html`<p role="alert">Результат пока не сохранился. Ответы на месте, попробуй ещё раз.</p>` : nothing}
       ${this.assessmentPause ? html`<button class="primary" @click=${() => { this.assessmentPause = 0; }}>продолжить</button>` : html`<button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
         @click=${() => this.nextAnswer()}>${remaining > 1 ? 'Дальше' : 'Сохранить результат'}</button>`}
@@ -880,7 +888,8 @@ class LearnApp extends LitElement {
     try {
       await this.mutate('assessment', { answers: this.answers });
       await this.refresh();
-      if (this.personId === id && this.page === 'assessment') this.go('home');
+      // Финальная сцена закрывает экран маской и на кадре закрытия переключает его на результат.
+      if (this.personId === id && this.page === 'assessment') this.finale = true;
     } catch {
       await this.refresh().catch(() => {});
       if (this.personId === id && this.page === 'assessment') this.assessmentStatus = this.person.soft ? 'done' : 'error';

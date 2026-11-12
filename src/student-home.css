@@ -766,3 +766,6 @@ mentor-note { display: block; }
 learn-app { text-transform: lowercase; }
 learn-app :is(input[type=url], pre, code) { text-transform: none; }
 learn-app .calendar-top h2::first-letter, learn-app .calendar-agenda-title h2::first-letter { text-transform: lowercase; }
+
+.assessment .encouragement-scene { width: 200px; height: 200px; margin: -8px auto -12px; }
+.assessment-finale { position: fixed; inset: 0; z-index: 50; }

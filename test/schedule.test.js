@@ -81,6 +81,6 @@ test('shuffledAnswers is a stable permutation that keeps original indexes', () =
 });
 
 test('assessment pauses stay inside the test', () => {
-  assert.deepEqual(assessmentPauses, [10, 20, 25]);
+  assert.deepEqual(assessmentPauses, [9, 20, 25]);
   assert.ok(assessmentPauses.every((count) => count > 0 && count < questions.length));
 });

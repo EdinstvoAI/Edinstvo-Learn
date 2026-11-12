@@ -36,7 +36,12 @@ export class SkillGrowth extends LitElement {
       this.player.addEventListener('enterFrame', ({ currentTime }) => {
         this.dispatchEvent(new CustomEvent('growth-frame', { detail: currentTime }));
       });
-      this.player.addEventListener('complete', () => this.finish());
+      // Сцена входит и уходит через прозрачность, чтобы круг и частицы не появлялись и не пропадали рывком.
+      this.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
+      this.player.addEventListener('complete', async () => {
+        await this.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+        this.finish();
+      });
       this.player.addEventListener('data_failed', () => this.finish(false));
       this.player.play();
     } catch {

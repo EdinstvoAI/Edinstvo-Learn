@@ -11,6 +11,7 @@ import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
 import { encodePhoto, request, telegramData } from './api.js';
+import { assessmentPauses, filterTasks, formatDate, parseDate, shiftDate, shuffledAnswers, taskOnDay, tasksByWeek, upcomingTask } from './schedule.js';
 import './style.css';
 import './student-home.css';
 
@@ -29,24 +30,12 @@ const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const dayLabel = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const longDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', weekday: 'long', timeZone: 'UTC' });
 const monthLabel = new Intl.DateTimeFormat('ru', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-const parseDate = (date) => new Date(date + 'T12:00:00Z');
-const formatDate = (date) => date.toISOString().slice(0, 10);
 const emptySoft = softSkills.map(() => null);
 const today = () => {
   const date = new Date();
   return formatDate(new Date(date.getTime() - date.getTimezoneOffset() * 60_000));
 };
 const emptyProfile = { soft: null, hard: [], projects: [], photos: [] };
-function shuffledAnswers(questionIndex, answers) {
-  const order = answers.map((_, index) => index);
-  let seed = (questionIndex + 1) * 7919;
-  for (let index = order.length - 1; index > 0; index -= 1) {
-    seed = (seed * 48271) % 2147483647;
-    const swap = seed % (index + 1);
-    [order[index], order[swap]] = [order[swap], order[index]];
-  }
-  return order.map((index) => ({ index, answer: answers[index] }));
-}
 
 class LearnApp extends LitElement {
   static properties = {
@@ -723,10 +712,8 @@ class LearnApp extends LitElement {
       if (!started) return;
       this.motionState = 'ready';
       this.neutralOrientation = null;
-      document.removeEventListener('visibilitychange', this.onVisibility);
-    this.resumeWebApp?.offEvent('activated', this.onResume);
-    this.resumeWebApp = undefined;
-    window.removeEventListener('deviceorientation', this.orientWheel);
+      // Наклон теперь приходит от Telegram, браузерное событие дало бы второй источник.
+      window.removeEventListener('deviceorientation', this.orientWheel);
     });
   }
 
@@ -817,7 +804,7 @@ class LearnApp extends LitElement {
       if (this.pendingAnswer === null) return;
       this.answers = [...this.answers, this.pendingAnswer];
       this.pendingAnswer = null;
-      if ([10, 20, 25].includes(this.answers.length)) {
+      if (assessmentPauses.includes(this.answers.length)) {
         this.assessmentPause = this.answers.length;
         return;
       }
@@ -844,15 +831,9 @@ class LearnApp extends LitElement {
     const offset = (selected.getUTCDay() + 6) % 7;
     const now = new Date().toTimeString().slice(0, 5);
     const currentDay = today();
-    const upcoming = this.personTasks.find((task) => !task.done
-      && ((task.endDate ?? task.date) > currentDay || ((task.startDate ?? task.date) <= currentDay && task.time >= now)));
-    const visibleTasks = this.personTasks.filter((task) => this.date >= (task.startDate ?? task.date) && this.date <= (task.endDate ?? task.date)).sort((a, b) => a.time.localeCompare(b.time));
-    const newCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const filteredTasks = this.personTasks.filter((task) => {
-      if (this.calendarFilter === 'today') return this.date >= (task.startDate ?? task.date) && this.date <= (task.endDate ?? task.date);
-      if (this.calendarFilter === 'new') return task.createdAt && Date.parse(task.createdAt) >= newCutoff;
-      return true;
-    }).sort((a, b) => (a.startDate ?? a.date).localeCompare(b.startDate ?? b.date) || a.time.localeCompare(b.time));
+    const upcoming = upcomingTask(this.personTasks, currentDay, now);
+    const filteredTasks = filterTasks(this.personTasks, this.calendarFilter, this.date);
+    const emptyText = { today: 'На этот день задач нет.', new: 'За неделю новых задач нет.', all: 'Задач пока нет.' }[this.calendarFilter];
     const learner = this.role === 'mentee';
     return html`
       ${learner ? this.learnerTitle('calendar', 'Календарь') : html`<div class="page-title"><div><h1>Календарь</h1><p>${this.person.name}</p></div></div>`}
@@ -876,7 +857,7 @@ class LearnApp extends LitElement {
           return html`<button aria-label=${longDate.format(date)} aria-pressed=${this.date === key}
             aria-current=${key === currentDay ? 'date' : nothing} @click=${() => { this.date = key; }}>
             <small>${day}</small><strong>${date.getUTCDate()}</strong>
-            <span class=${this.personTasks.some((task) => key >= (task.startDate ?? task.date) && key <= (task.endDate ?? task.date)) ? 'day-dot visible' : 'day-dot'}></span>
+            <span class=${this.personTasks.some((task) => taskOnDay(task, key)) ? 'day-dot visible' : 'day-dot'}></span>
           </button>`;
         })}</div>
       </section>
@@ -896,7 +877,7 @@ class LearnApp extends LitElement {
         ${this.personId ? html`<button class="primary" @click=${() => this.open({ type: 'create' })}>+ Задача</button>` : nothing}</div>
       ${filteredTasks.length
         ? html`<section class="agenda">${filteredTasks.map((task) => this.calendarTask(task))}</section>`
-        : html`<p class="agenda-empty">На этот день задач нет.</p>`}
+        : html`<p class="agenda-empty">${emptyText}</p>`}
       </div>`;
   }
 
@@ -920,9 +901,7 @@ class LearnApp extends LitElement {
   }
 
   moveWeek(days) {
-    const next = parseDate(this.date);
-    next.setUTCDate(next.getUTCDate() + days);
-    this.date = formatDate(next);
+    this.date = shiftDate(this.date, days);
   }
 
   learnerTitle(kind, title) {
@@ -953,14 +932,31 @@ class LearnApp extends LitElement {
   }
 
   projectPage() {
-    const project = this.person.projects.find((item) => item.id === this.selectedProject?.id) ?? this.selectedProject;
+    const project = this.person.projects.find((item) => item.id === this.selectedProject?.id);
     if (!project) return this.projects();
+    const weeks = this.projectWeeks(project);
     return html`<button class="text-button project-back" @click=${() => this.go('projects')}>← проекты</button>
       <section class="project-page"><h1>${project.name}</h1>
         ${project.description ? html`<p>${project.description}</p>` : nothing}
         <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
-        <section class="project-plan"><h2>задачи проекта</h2>${this.projectWeeks(project.id).length ? this.projectWeeks(project.id) : html`<p class="empty">пока нет задач.</p>`}</section>
-        <section class="project-comments"><h2>комментарии ментора</h2>${project.comments?.length ? html`<ul>${project.comments.map((comment) => html`<li><strong>${comment.author}</strong><p>${comment.text}</p></li>`)}</ul>` : html`<p class="empty">пока нет комментариев.</p>`}</section>
+        <section class="project-plan"><h2>задачи проекта</h2>
+          ${weeks.length ? weeks : html`<p class="empty">пока нет задач.</p>`}
+          <div class="project-actions">
+            <button class="primary" @click=${() => this.open({ type: 'create', project })}>+ задача</button>
+            ${this.linkableTasks().length ? html`<button class="text-button"
+              @click=${() => this.open({ type: 'link-existing', project })}>привязать из календаря</button>` : nothing}
+          </div>
+        </section>
+        <section class="project-comments"><h2>комментарии ментора</h2>
+          ${project.comments?.length ? html`<ul>${project.comments.map((comment) => html`<li><strong>${comment.author}</strong>
+            <time datetime=${comment.createdAt}>${dayLabel.format(new Date(comment.createdAt))}</time>
+            <p>${comment.text}</p></li>`)}</ul>` : html`<p class="empty">пока нет комментариев.</p>`}
+          ${this.role === 'mentor' ? html`<form autocapitalize="none" @submit=${(event) => this.addProjectComment(event, project)}>
+            <label>Комментарий<textarea name="text" maxlength="1000" rows="2" required></textarea></label>
+            ${this.formError && !this.modal ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
+            <button class="primary" ?disabled=${this.formBusy}>Добавить комментарий</button>
+          </form>` : nothing}
+        </section>
       </section>`;
   }
 
@@ -977,25 +973,16 @@ class LearnApp extends LitElement {
     return this.personTasks.filter((task) => !task.projectId && (this.role === 'mentor' || task.movable));
   }
 
-  projectWeeks(projectId) {
-    const weeks = new Map();
-    for (const task of this.personTasks.filter((item) => item.projectId === projectId)) {
-      const monday = parseDate(task.date);
-      monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
-      const start = formatDate(monday);
-      if (!weeks.has(start)) weeks.set(start, []);
-      weeks.get(start).push(task);
-    }
-    return [...weeks].map(([start, tasks]) => {
+  projectWeeks(project) {
+    return tasksByWeek(this.personTasks.filter((item) => item.projectId === project.id)).map(([start, tasks]) => {
       const monday = parseDate(start);
-      const sunday = parseDate(start);
-      sunday.setUTCDate(sunday.getUTCDate() + 6);
+      const sunday = parseDate(shiftDate(start, 6));
       return html`<section class="project-week">
         <h4>${dayLabel.formatRange(monday, sunday)}</h4>
         ${tasks.map((task) => html`<button class="project-task" @click=${() => {
-          this.querySelector('dialog')?.close();
           this.selectedProject = project;
           this.date = task.date;
+          this.calendarFilter = 'today';
           this.go('calendar');
         }}><strong>${task.title}${task.done ? ' ✓' : ''}</strong>
           <time datetime=${task.date + 'T' + task.time}>${dayLabel.format(parseDate(task.date))}, ${task.time}</time>
@@ -1015,7 +1002,6 @@ class LearnApp extends LitElement {
     try {
       await this.mutate('project-comment', { projectId: project.id, text });
       await this.refresh();
-      this.modal = { type: 'project', project: this.person.projects.find((item) => item.id === project.id) };
       form.reset();
     } catch (error) {
       this.formError = error.message;
@@ -1028,40 +1014,14 @@ class LearnApp extends LitElement {
     const { type, task, project, key, index, label, step } = this.modal;
     const title = {
       hard: 'Новый круг хардов', create: 'Новая задача', move: 'Перенести задачу',
-      project: project?.name, photo: 'Добавить фото', score: label,
-      'new-project': step === 2 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
+      photo: 'Добавить фото', score: label,
+      'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
     }[type];
     const previousScore = this.person.mentorScores?.[index];
     const softScore = key === 'soft';
-    const weeks = type === 'project' ? this.projectWeeks(project.id) : [];
     return html`
       <div class="dialog-top"><h2 id="dialog-title" tabindex="-1">${title}</h2><button class="round" type="button" aria-label="Закрыть" ?disabled=${this.formBusy} @click=${() => this.querySelector('dialog').close()}>×</button></div>
-      ${type === 'project' ? html`
-        <p>${project.description}</p><div class="sources">${project.sources.map((source) => html`
-          <a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
-        <section class="project-plan">
-          <h3>Задачи проекта</h3>
-          ${weeks.length ? weeks : html`<p class="empty">Пока нет задач.</p>`}
-          <div class="project-actions">
-            <button class="primary" @click=${() => this.open({ type: 'create', project })}>+ Задача</button>
-            ${this.linkableTasks().length ? html`<button class="text-button"
-              @click=${() => this.open({ type: 'link-existing', project })}>Привязать из календаря</button>` : nothing}
-          </div>
-        </section>
-        <section class="project-comments">
-          <h3>Комментарии ментора</h3>
-          ${project.comments?.length ? html`<ul>
-            ${project.comments.map((comment) => html`<li><strong>${comment.author}</strong>
-              <time datetime=${comment.createdAt}>${dayLabel.format(new Date(comment.createdAt))}</time>
-              <p>${comment.text}</p></li>`)}
-          </ul>` : html`<p class="empty">Пока нет комментариев.</p>`}
-          ${this.role === 'mentor' ? html`<form autocapitalize="none" @submit=${(event) => this.addProjectComment(event, project)}>
-            <label>Комментарий<textarea name="text" maxlength="1000" rows="2" required></textarea></label>
-            ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
-            <button class="primary" ?disabled=${this.formBusy}>Добавить комментарий</button>
-          </form>` : nothing}
-        </section>`
-        : html`<form autocapitalize="none" @submit=${(event) => this.save(event)}>
+      <form autocapitalize="none" @submit=${(event) => this.save(event)}>
           ${type === 'hard' ? html`
             <label>Название<input name="name" required maxlength="70"></label>
             <label>До 10 навыков через запятую<input name="skills" required maxlength="300" placeholder="Git, Docker, LLM"></label>`
@@ -1085,7 +1045,7 @@ class LearnApp extends LitElement {
               <legend>3 из 3. папка</legend>
               <div class="folder-options">${folders.map(([id, name]) => html`
                 <label><input type="radio" name="folder" value=${id} ?checked=${id === 'gel'}>
-                  <img src=${step === 2 ? '/folders/' + id + '.webp' : nothing} alt=""><span>${name}</span></label>`)}</div>
+                  <img src=${step === 3 ? '/folders/' + id + '.webp' : nothing} alt=""><span>${name}</span></label>`)}</div>
             </fieldset>
             ${step > 1 ? html`<button class="text-button project-back" type="button"
               @click=${() => { this.modal = { ...this.modal, step: step - 1 }; }}>Назад</button>` : nothing}`
@@ -1120,8 +1080,8 @@ class LearnApp extends LitElement {
             </select></label>` : nothing}
             ${type === 'create' && this.role === 'mentor' ? html`<label class="check"><input type="checkbox" name="movable"> Менти может перенести задачу</label>` : nothing}`}
           ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
-          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 2 ? 'Создать проект' : 'Дальше') : 'Сохранить'}</button>
-        </form>`}`;
+          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : 'Сохранить'}</button>
+        </form>`;
   }
 
   async save(event) {

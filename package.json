@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test",
+    "mentor:hash": "node server/hash-secret.js",
     "local:open": "node --env-file=.env server/open-local.js"
   },
   "dependencies": {

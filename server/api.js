@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { openDatabase } from './database.js';
 import { scoreAssessment } from './assessment.js';
 import { ApiError, allowed, lowerText, projectSources, requireInput, shortText, taskSchedule, uuid } from './input.js';
+import { attemptLimiter, mentorCredentialsValid, mentorLoginConfigured } from './mentor-login.js';
 import { accessCode as dailyCode, hash, safeEqual, telegramPhone, telegramUser } from './telegram.js';
 
 const folderNames = new Set('grass fur cheese leopard turf chrome gel vinyl terrazzo nylon corduroy foil gingham cactus cloud'.split(' '));
@@ -32,6 +33,7 @@ function json(response, status, data) {
 
 // database можно передать снаружи, чтобы проверять маршруты без PostgreSQL.
 export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATABASE_URL) : null) {
+  const mentorAttempts = attemptLimiter();
   const allowLocal = Boolean(env.LOCAL_SETUP_TOKEN) && !env.PUBLIC_ORIGIN;
   const cookiePolicy = env.PUBLIC_ORIGIN?.startsWith('https://')
     ? 'SameSite=None; Secure; Partitioned'
@@ -129,6 +131,21 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         await client.query('SELECT pg_advisory_xact_lock(1348413)');
         const existing = (await client.query('SELECT id FROM accounts WHERE local_id = $1', [localId])).rows[0];
         return existing?.id ?? await createStudent(client, name, null, localId);
+      }
+      if (route === '/mentor') {
+        allowed(mentorLoginConfigured(env));
+        if (mentorAttempts.blocked()) throw new ApiError(429, 'Слишком много попыток. Попробуй через несколько минут.');
+        if (!mentorCredentialsValid(env, data)) {
+          mentorAttempts.fail();
+          throw new ApiError(403, 'Данные не подошли.');
+        }
+        mentorAttempts.reset();
+        await client.query('SELECT pg_advisory_xact_lock(1348413)');
+        // В публичном окружении сессия ментора привязана к его Telegram ID, поэтому берём тот же аккаунт.
+        if (env.TELEGRAM_MENTOR_ID) return telegramMentor(client);
+        const existing = (await client.query("SELECT id FROM accounts WHERE role = 'mentor' ORDER BY id LIMIT 1")).rows[0];
+        return existing?.id ?? (await client.query("INSERT INTO accounts (role, name) VALUES ('mentor', $1) RETURNING id",
+          [shortText(env.LOCAL_MENTOR_NAME, 100) || 'Ментор'])).rows[0].id;
       }
       allowed(Boolean(env.TELEGRAM_BOT_TOKEN));
       const user = telegramUser(data.initData, env.TELEGRAM_BOT_TOKEN);
@@ -326,7 +343,7 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
           allowed(!origin || origin === (env.PUBLIC_ORIGIN || 'http://' + request.headers.host));
           requireInput(request.headers['content-type']?.startsWith('application/json'));
           const data = await bodyOf(request);
-          if (['/local', '/local/student', '/telegram'].includes(route)) {
+          if (['/local', '/local/student', '/telegram', '/mentor'].includes(route)) {
             await session(client, response, await signIn(route, data));
             json(response, 200, await state(client, await actorFor(client, {
               headers: { cookie: response.getHeader('Set-Cookie').split(';')[0] },

@@ -12,7 +12,7 @@ import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
 import { encodePhoto, request, telegramData } from './api.js';
-import { assessmentPauses, filterTasks, formatDate, parseDate, shiftDate, shuffledAnswers, taskOnDay, tasksByWeek, upcomingTask } from './schedule.js';
+import { assessmentPauses, filterTasks, formatDate, parseDate, shiftDate, shuffledAnswers, taskOnDay, tasksByWeek } from './schedule.js';
 import './style.css';
 import './student-home.css';
 
@@ -27,10 +27,10 @@ const shortSoftLabels = [
   'Адаптация', 'Рефлексия', 'Инициатива', 'Обратная связь', 'Самоорганиз.',
 ];
 
-const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const weekDays = ['п', 'в', 'с', 'ч', 'п', 'с', 'в'];
+const monthName = new Intl.DateTimeFormat('ru', { month: 'long', timeZone: 'UTC' });
 const dayLabel = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 const longDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', weekday: 'long', timeZone: 'UTC' });
-const monthLabel = new Intl.DateTimeFormat('ru', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const emptySoft = softSkills.map(() => null);
 const today = () => {
   const date = new Date();
@@ -69,7 +69,6 @@ class LearnApp extends LitElement {
     navMotion: { state: true },
     wheelMotion: { state: true },
     selectedProject: { state: true },
-    profileFlipped: { state: true },
     mentorStep: { state: true },
   };
 
@@ -101,7 +100,6 @@ class LearnApp extends LitElement {
     this.activeSector = -1;
     this.wheelMotion = 0;
     this.selectedProject = null;
-    this.profileFlipped = false;
     this.mentorStep = 0;
     this.motionState = typeof globalThis.DeviceOrientationEvent?.requestPermission === 'function' ? 'ask' : 'ready';
     this.orientWheel = (event) => this.onOrientation(event);
@@ -185,6 +183,7 @@ class LearnApp extends LitElement {
         ? await request(this.localStudent ? '/local/student' : '/local', { token: this.localToken, name: this.localStudent })
         : await request('/state');
       this.localToken = null;
+      this.localJoin = Boolean(state.local);
       if (state.telegram && (!state.account || window.Telegram?.WebApp || location.hash.includes('tgWebAppData='))) {
         try {
           const initData = await telegramData();
@@ -256,7 +255,7 @@ class LearnApp extends LitElement {
     this.activeWheel = 0;
     this.activeSector = -1;
     this.neutralOrientation = null;
-    this.profileFlipped = false;
+    this.cardTurn = 0;
   }
 
   mutate(action, data) {
@@ -310,20 +309,76 @@ class LearnApp extends LitElement {
     }
   }
 
-  tiltCard(event) {
-    if (event.pointerType !== 'mouse' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const card = event.currentTarget;
-    const bounds = card.getBoundingClientRect();
-    card.classList.add('is-tilting');
-    card.style.setProperty('--card-x', (0.5 - (event.clientY - bounds.top) / bounds.height) * 22 + 'deg');
-    card.style.setProperty('--card-y', ((event.clientX - bounds.left) / bounds.width - 0.5) * 26 + 'deg');
+  // Карточка профиля вращается за пальцем или мышью как 3D-объект. Короткое касание переворачивает её,
+  // после отпускания она доворачивается к ближайшей стороне.
+  turnCard(rotateY, rotateX, dragging) {
+    const inner = this.querySelector('.profile-card-3d');
+    if (!inner) return;
+    inner.classList.toggle('is-dragging', dragging);
+    inner.style.setProperty('--turn-y', rotateY + 'deg');
+    inner.style.setProperty('--turn-x', rotateX + 'deg');
   }
 
-  resetCard(event) {
-    const card = event.currentTarget;
-    card.classList.remove('is-tilting');
-    card.style.removeProperty('--card-x');
-    card.style.removeProperty('--card-y');
+  cardDown(event) {
+    this.cardDrag = { x: event.clientX, y: event.clientY, base: this.cardTurn ?? 0, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  cardMove(event) {
+    const drag = this.cardDrag;
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    drag.moved ||= Math.hypot(dx, dy) > 6;
+    if (drag.moved) this.turnCard(drag.base + dx * .6, Math.max(-35, Math.min(35, -dy * .35)), true);
+  }
+
+  cardUp(event) {
+    const drag = this.cardDrag;
+    if (!drag) return;
+    this.cardDrag = null;
+    const current = drag.base + (event.clientX - drag.x) * .6;
+    this.cardTurn = drag.moved ? Math.round(current / 180) * 180 : drag.base + 180;
+    this.turnCard(this.cardTurn, 0, false);
+  }
+
+  async joinLocal(event) {
+    event.preventDefault();
+    if (this.formBusy) return;
+    const data = new FormData(event.currentTarget);
+    this.bootError = '';
+    this.formBusy = true;
+    try {
+      this.applyState(await request('/local/join', { name: String(data.get('name')).trim(), code: String(data.get('code') ?? '') }));
+      this.go(this.person.soft ? 'home' : 'assessment');
+    } catch (error) {
+      this.bootError = error.message;
+    } finally {
+      this.formBusy = false;
+    }
+  }
+
+  // Ментор правит процент навыка прямо в списке. Сохранение сразу, при ошибке поле возвращается к прежнему значению.
+  async savePercent(event, key, index) {
+    const field = event.currentTarget;
+    const score = Number(field.value);
+    if (field.value === '' || !Number.isInteger(score) || score < 0 || score > 100) {
+      this.formError = 'Процент от 0 до 100.';
+      field.value = field.defaultValue;
+      return;
+    }
+    field.disabled = true;
+    try {
+      const { reached } = await this.mutate('score', { key, index, score });
+      if (reached) this.celebration = { person: this.personId, key };
+      this.formError = '';
+      await this.refresh();
+    } catch (error) {
+      this.formError = error.message;
+      field.value = field.defaultValue;
+    } finally {
+      field.disabled = false;
+    }
   }
 
   async loadCode() {
@@ -438,6 +493,12 @@ class LearnApp extends LitElement {
             <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.mentorStep === 1 ? 'Дальше' : 'Войти'}</button>
             <button class="text-button" type="button" @click=${() => { this.mentorStep = 0; this.mentorLogin = null; this.bootError = ''; }}>Отмена</button>
           </form>`)
+          : this.bootStatus === 'ready' && this.localJoin ? html`<form autocapitalize="none" @submit=${(event) => this.joinLocal(event)}>
+            <h1>Вход</h1><p>Введи имя и сегодняшний код от ментора. Код нужен только при первом входе.</p>
+            <label>Имя<input name="name" required maxlength="100" autocomplete="name"></label>
+            <label>Код<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label>
+            <button class="primary" type="submit" ?disabled=${this.formBusy}>Войти</button>
+          </form>`
           : this.bootStatus === 'ready' ? html`<p>Открой Единство Learn через Telegram.</p>` : nothing}
         ${this.bootError ? html`<p class="form-error" role="alert">${this.bootError}</p>
           ${this.bootStatus === 'error' ? html`<button class="text-button" @click=${() => this.boot()}>Повторить</button>` : nothing}` : nothing}
@@ -522,7 +583,7 @@ class LearnApp extends LitElement {
           <h1>${firstName}</h1>
         </header>
         <section class="home-summary" aria-label="Сводка">
-          <p><span class="summary-muted">${greeting},</span> <img src="/mobile-home/star.png" alt="" width="30" height="29"> <strong>${firstName}</strong></p>
+          <p><span class="summary-muted">${greeting},</span> <span class="summary-avatar">${this.avatar(this.person)}</span> <strong>${firstName}</strong></p>
           <p><span class="summary-muted">у тебя</span> <span aria-hidden="true">📅</span> <strong>${active ? active + ' ' + taskLabel : 'пока нет задач'}</strong></p>
           ${note ? html`<p><span aria-hidden="true">💬</span> комментарий ментора</p>` : nothing}
         </section>
@@ -545,48 +606,51 @@ class LearnApp extends LitElement {
         <button class="text-button" @click=${() => this.go('calendar')}>Задачи</button>
         <button class="text-button" @click=${() => this.go('projects')}>Проекты</button>
       </div>` : nothing}
-      <section class="profile-metal" aria-label="Профиль" tabindex="0"
-        @pointermove=${(event) => this.tiltCard(event)} @pointerleave=${(event) => this.resetCard(event)}
-        @click=${() => { this.profileFlipped = !this.profileFlipped; }}
-        @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.profileFlipped = !this.profileFlipped; } }}>
-        <div class=${'profile-metal-inner' + (this.profileFlipped ? ' is-flipped' : '')}>
-          <div class="profile-metal-face profile-metal-front">
-            <span class="profile-metal-kicker">менторство</span>
-            ${this.avatar(this.person)}
+      <section class="profile-card" aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
+        @pointerdown=${(event) => this.cardDown(event)} @pointermove=${(event) => this.cardMove(event)}
+        @pointerup=${(event) => this.cardUp(event)} @pointercancel=${(event) => this.cardUp(event)}
+        @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
+        <div class="profile-card-3d" style=${'--turn-y:' + (this.cardTurn ?? 0) + 'deg'}>
+          ${Array.from({ length: 12 }, (_, index) => html`<span class="card-slice" style=${'--slice:' + index} aria-hidden="true"></span>`)}
+          <div class="card-face card-front">
+            <span class="card-role">${this.person.title || 'менти'}</span>
             <h1>${name}</h1>
             <div class="profile-contact">
               ${username ? html`<span>@${username}</span>` : nothing}
               ${phone ? html`<span>${phone}</span>` : nothing}
             </div>
-            <span class="profile-metal-hint">нажми, чтобы перевернуть</span>
           </div>
-          <div class="profile-metal-face profile-metal-back">
-            <span class="profile-metal-kicker">первый вход</span>
+          <div class="card-face card-back">
+            <span class="card-role">первый вход</span>
             <strong>${createdAt ? new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(createdAt)) : 'дата пока не записана'}</strong>
             <span>с этого дня начинается твой путь в единстве</span>
-            <span class="profile-metal-hint">нажми, чтобы вернуться</span>
           </div>
         </div>
       </section>
+      ${this.role === 'mentor' ? html`<button class="text-button profile-title-edit" @click=${() => this.open({ type: 'title' })}>роль на карточке: ${this.person.title || 'не задана'}</button>` : nothing}
       ${canSharePhone && !phone ? html`<button class="text-button profile-share-phone" ?disabled=${this.formBusy}
         @click=${() => this.sharePhone(webApp)}>поделиться номером с ментором</button>` : nothing}
       ${this.contactError ? html`<p class="form-error" role="alert">${this.contactError}</p>` : nothing}
       <section class="profile-lower memories" aria-labelledby="memories-title">
         <header class="memories-header">
-          <h2 id="memories-title">Воспоминания</h2>
-          ${this.role === 'mentee' ? html`<button class="text-button" @click=${() => this.open({ type: 'photo' })}>Добавить фото</button>` : nothing}
+          <h2 id="memories-title">воспоминания</h2>
+          <p>делись своей работой с ментором</p>
         </header>
-        ${photos.length ? html`<div class="photo-grid">${photos.map((photo) => html`<figure>
-          <img src=${photo.url} alt=${photo.caption || 'Фото рабочего процесса'} loading="lazy">
-          <figcaption>
-            ${photo.caption ? html`<p>${photo.caption}</p>` : nothing}
-            <time datetime=${photo.date}>${dayLabel.format(parseDate(photo.date))}</time>
-          </figcaption>
-          ${this.role === 'mentee' ? html`<button class="text-button" aria-label=${'Удалить фото от ' + dayLabel.format(parseDate(photo.date))}
-            @click=${() => this.removePhoto(photo)}>Удалить</button>` : nothing}
-        </figure>`)}</div>` : html`<button class="memories-empty" @click=${() => this.open({ type: 'photo' })}>добавить фото</button>`}
+        <div class="photo-grid">
+          ${this.role === 'mentee' ? html`<button class="memories-add" @click=${() => this.open({ type: 'photo' })}><span aria-hidden="true">+</span>добавить фото</button>` : nothing}
+          ${photos.map((photo) => html`<figure>
+            <img src=${photo.url} alt=${photo.caption || 'Фото рабочего процесса'} loading="lazy">
+            <figcaption>
+              ${photo.caption ? html`<p>${photo.caption}</p>` : nothing}
+              <time datetime=${photo.date}>${dayLabel.format(parseDate(photo.date))}</time>
+              ${this.role === 'mentee' ? html`<button class="text-button" aria-label=${'Удалить фото от ' + dayLabel.format(parseDate(photo.date))}
+                @click=${() => this.removePhoto(photo)}>удалить</button>` : nothing}
+            </figcaption>
+          </figure>`)}
+        </div>
+        ${!photos.length && this.role === 'mentor' ? html`<p class="empty">фото пока нет.</p>` : nothing}
         ${this.photoError ? html`<p class="form-error photo-error" role="alert">${this.photoError}</p>` : nothing}
-      </section>`;
+    </section>`;
   }
 
   async sharePhone(webApp) {
@@ -618,7 +682,7 @@ class LearnApp extends LitElement {
   softLevels() {
     return (this.person.soft ?? emptySoft).map((level, index) => {
       const assessment = this.person.mentorScores?.[index];
-      return assessment ? assessment.score * 20 : level;
+      return assessment ? assessment.percent ?? assessment.score * 20 : level;
     });
   }
 
@@ -789,6 +853,7 @@ class LearnApp extends LitElement {
         <div><h1>Навыки</h1><p>${this.person.name}</p></div>
         ${this.role === 'mentor' ? html`<button class="primary" @click=${() => this.open({ type: 'hard' })}>+ Круг хардов</button>` : nothing}
       </div>
+      ${this.formError && !this.modal ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
       <div class="skill-grid">
         ${this.skillCard('Софты', softSkills, this.softLevels(), 'green', 'soft')}
         ${repeat(this.person.hard, (group, index) => index, (group, index) => this.skillCard('Харды', group.skills, group.levels, 'purple', index, group.name))}
@@ -812,12 +877,15 @@ class LearnApp extends LitElement {
         <li class=${edit ? 'editable' : ''}><button aria-pressed=${selected === index} @click=${() => {
           this.selections = { ...this.selections, [key]: selected === index ? -1 : index };
         }}>
-          <span class="legend-dot" aria-hidden="true"></span><span>${label}</span><strong>${levels[index] === null ? 'Нет оценки' : levels[index] + '%'}</strong>
+          <span class="legend-dot" aria-hidden="true"></span><span>${label}</span>${edit ? nothing : html`<strong>${levels[index] === null ? 'Нет оценки' : levels[index] + '%'}</strong>`}
         </button>
-        ${edit ? html`<button class="edit-skill" aria-label=${'Оценить ' + label} @click=${() => this.open({ type: 'score', key, index, label })}>✎</button>` : nothing}
+        ${edit ? html`<label class="skill-percent"><input type="number" min="0" max="100" step="1" inputmode="numeric"
+          aria-label=${'Процент: ' + label} .value=${levels[index] === null ? '' : String(levels[index])}
+          .defaultValue=${levels[index] === null ? '' : String(levels[index])}
+          @change=${(event) => this.savePercent(event, key, index)}>%</label>` : nothing}
         ${key === 'soft' && selected === index && this.person.soft ? html`<p class="skill-note detail">
           Оценка теста: ${this.person.soft[index]}%.
-          ${this.person.mentorScores?.[index] ? html` Оценка ментора: ${this.person.mentorScores[index].score}/5. ${this.person.mentorScores[index].reason}` : nothing}
+          ${this.person.mentorScores?.[index] ? html` Оценка ментора: ${this.person.mentorScores[index].percent ?? this.person.mentorScores[index].score * 20}%. ${this.person.mentorScores[index].reason ?? ''}` : nothing}
         </p>` : nothing}
         </li>`)}</ul>
     </section>`;
@@ -830,7 +898,7 @@ class LearnApp extends LitElement {
     if (status === 'intro' || status === 'done') {
       return html`<section class="assessment assessment-cover">
         <div class="assessment-emblem">
-          <img src="/mobile-home/star.png" alt="">
+          ${this.avatar(this.person)}
           <skill-celebration color="ink" ?orbit=${status === 'intro'} ?confetti=${status === 'done'}></skill-celebration>
         </div>
         <h1>${status === 'intro' ? 'Начнём с софтов?' : 'Готово, молодец!'}</h1>
@@ -852,12 +920,9 @@ class LearnApp extends LitElement {
       <div class="assessment-segments" aria-label=${`Отвечено вопросов: ${this.answers.length} из ${questions.length}`}>
         ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
       </div>
-      ${checkpoint ? keyed(this.assessmentPause, html`<div class="encouragement" role="status"><img src="/mobile-home/star.png" alt="">
-        <p>${{ 9: 'Молодец, отлично идёшь!', 20: 'Две трети позади, так держать!' }[this.assessmentPause] ?? 'Молодец, финальный рывок!'}</p>
-        ${this.assessmentPause === 9 || this.assessmentPause === 20 ? nothing
-          : html`<skill-celebration color="ink" compact fly confetti></skill-celebration>`}</div>
-        ${this.assessmentPause === 9 || this.assessmentPause === 20
-          ? html`<assessment-scene class="encouragement-scene" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}></assessment-scene>` : nothing}`) : nothing}
+      ${checkpoint ? keyed(this.assessmentPause, html`<div class="encouragement" role="status">${this.avatar(this.person)}
+        <p>${{ 9: 'Молодец, отлично идёшь!', 20: 'Две трети позади, так держать!' }[this.assessmentPause] ?? 'Молодец, финальный рывок!'}</p></div>
+        <assessment-scene class="assessment-burst" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}></assessment-scene>`) : nothing}
       ${question && !this.assessmentPause ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
       </div></div>`) : checkpoint ? nothing : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
@@ -899,55 +964,45 @@ class LearnApp extends LitElement {
   calendar() {
     const selected = parseDate(this.date);
     const offset = (selected.getUTCDay() + 6) % 7;
-    const now = new Date().toTimeString().slice(0, 5);
     const currentDay = today();
-    const upcoming = upcomingTask(this.personTasks, currentDay, now);
     const filteredTasks = filterTasks(this.personTasks, this.calendarFilter, this.date);
-    const emptyText = { today: 'На этот день задач нет.', new: 'За неделю новых задач нет.', all: 'Задач пока нет.' }[this.calendarFilter];
     const learner = this.role === 'mentee';
     return html`
-      ${learner ? this.learnerTitle('calendar', 'Календарь') : html`<div class="page-title"><div><h1>Календарь</h1><p>${this.person.name}</p></div></div>`}
+      ${learner ? html`<header class="home-person"><span>менти</span><p>${this.account.name.split(/\s+/)[0]}</p></header>`
+        : html`<div class="page-title"><div><h1>Календарь</h1><p>${this.person.name}</p></div></div>`}
       <div class="calendar-layout">
-      <section class="calendar-card" @touchstart=${(event) => { this.weekTouch = event.changedTouches[0].clientX; }}
-        @touchend=${(event) => {
-          if (this.weekTouch === undefined) return;
-          const distance = event.changedTouches[0].clientX - this.weekTouch;
-          this.weekTouch = undefined;
-          if (Math.abs(distance) > 44) this.moveWeek(distance < 0 ? 7 : -7);
-        }}>
-        <div class="calendar-top">
-          <h2>${monthLabel.format(selected)}</h2>
-          <label class="calendar-date">Выбрать дату<input aria-label="Выбрать дату" type="date" .value=${this.date}
-            @change=${(event) => { if (event.target.value) this.date = event.target.value; }}></label>
-        </div>
-        <div class="week" aria-label="Дни недели">${weekDays.map((day, index) => {
-          const date = parseDate(this.date);
-          date.setUTCDate(date.getUTCDate() - offset + index);
-          const key = formatDate(date);
-          return html`<button aria-label=${longDate.format(date)} aria-pressed=${this.date === key}
-            aria-current=${key === currentDay ? 'date' : nothing} @click=${() => { this.date = key; }}>
-            <small>${day}</small><strong>${date.getUTCDate()}</strong>
-            <span class=${this.personTasks.some((task) => taskOnDay(task, key)) ? 'day-dot visible' : 'day-dot'}></span>
-          </button>`;
-        })}</div>
-      </section>
-      <section class="calendar-next">
-        <h2>Ближайшее</h2>
-        ${upcoming ? html`<button @click=${() => { this.date = upcoming.date; }}>
-          <span class="next-day" aria-hidden="true">${parseDate(upcoming.date).getUTCDate()}</span>
-          <span><strong>${upcoming.title}</strong>
-          <time datetime=${upcoming.date + 'T' + upcoming.time}>${upcoming.date === currentDay ? 'Сегодня' : dayLabel.format(parseDate(upcoming.date))}, ${upcoming.time}</time></span>
-        </button>` : html`<p>Ближайших задач пока нет.</p>`}
-      </section>
-      <div class="calendar-filters" role="tablist" aria-label="Фильтр задач">
-        ${[['today', 'сегодня'], ['new', 'новые'], ['all', 'все']].map(([value, label]) => html`<button role="tab" aria-selected=${this.calendarFilter === value}
-          @click=${() => { this.calendarFilter = value; }}>${label}</button>`)}
-      </div>
-      <div class="section-line calendar-agenda-title"><h2>${this.calendarFilter === 'today' ? longDate.format(selected) : this.calendarFilter === 'new' ? 'добавлено недавно' : 'все задачи'}</h2>
-        ${this.personId ? html`<button class="primary" @click=${() => this.open({ type: 'create' })}>+ Задача</button>` : nothing}</div>
-      ${filteredTasks.length
-        ? html`<section class="agenda">${filteredTasks.map((task) => this.calendarTask(task))}</section>`
-        : html`<p class="agenda-empty">${emptyText}</p>`}
+        <section class="cal-card" @touchstart=${(event) => { this.weekTouch = event.changedTouches[0].clientX; }}
+          @touchend=${(event) => {
+            if (this.weekTouch === undefined) return;
+            const distance = event.changedTouches[0].clientX - this.weekTouch;
+            this.weekTouch = undefined;
+            if (Math.abs(distance) > 44) this.moveWeek(distance < 0 ? 7 : -7);
+          }}>
+          <h2 class="cal-month">${monthName.format(selected)}</h2>
+          <div class="cal-week" aria-label="Дни недели">${weekDays.map((day, index) => {
+            const key = shiftDate(this.date, index - offset);
+            const date = parseDate(key);
+            const busy = this.personTasks.some((task) => taskOnDay(task, key));
+            return html`<button aria-label=${longDate.format(date)} aria-pressed=${this.date === key}
+              aria-current=${key === currentDay ? 'date' : nothing} class=${busy ? 'is-busy' : ''} @click=${() => { this.date = key; this.calendarFilter = 'today'; }}>
+              <small>${day}</small><strong>${date.getUTCDate()}</strong>
+            </button>`;
+          })}</div>
+          <div class="cal-nav">
+            <button class="text-button" @click=${() => this.moveWeek(-7)}>предыдущая</button>
+            <button class="text-button" @click=${() => this.moveWeek(7)}>следующая</button>
+          </div>
+        </section>
+        <section class="cal-list">
+          <div class="cal-toggle" role="tablist" aria-label="Фильтр задач">
+            ${[['today', 'все'], ['new', 'новые']].map(([value, label]) => html`<button role="tab" aria-selected=${this.calendarFilter === value}
+              @click=${() => { this.calendarFilter = value; }}>${label}</button>`)}
+          </div>
+          ${filteredTasks.length
+            ? html`<div class="agenda">${filteredTasks.map((task) => this.calendarTask(task))}</div>`
+            : html`<p class="agenda-empty">${this.calendarFilter === 'new' ? 'за неделю новых задач нет.' : 'на этот день задач нет.'}</p>`}
+          ${this.personId ? html`<button class="text-button cal-add" @click=${() => this.open({ type: 'create' })}>+ задача</button>` : nothing}
+        </section>
       </div>`;
   }
 
@@ -1083,25 +1138,23 @@ class LearnApp extends LitElement {
   modalContent() {
     const { type, task, project, key, index, label, step } = this.modal;
     const title = {
-      hard: 'Новый круг хардов', create: 'Новая задача', move: 'Перенести задачу',
-      photo: 'Добавить фото', score: label,
+      hard: 'Новый круг хардов', title: 'Роль на карточке', create: 'Новая задача', move: 'Перенести задачу',
+      photo: 'Добавить фото',
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
     }[type];
-    const previousScore = this.person.mentorScores?.[index];
-    const softScore = key === 'soft';
     return html`
       <div class="dialog-top"><h2 id="dialog-title" tabindex="-1">${title}</h2><button class="round" type="button" aria-label="Закрыть" ?disabled=${this.formBusy} @click=${() => this.querySelector('dialog').close()}>×</button></div>
       <form autocapitalize="none" @submit=${(event) => this.save(event)}>
-          ${type === 'hard' ? html`
+          ${type === 'title' ? html`
+            <label>Роль, например дизайнер<input name="title" required maxlength="40" .value=${this.person.title ?? ''}></label>`
+          : type === 'hard' ? html`
             <label>Название<input name="name" required maxlength="70"></label>
             <label>До 10 навыков через запятую<input name="skills" required maxlength="300" placeholder="Git, Docker, LLM"></label>`
           : type === 'new-project' ? html`
             <fieldset class="project-step" ?hidden=${step !== 1}>
-              <legend>1 из 3. название</legend>
-              <label>Название<input name="name" required maxlength="80" placeholder="Название проекта"></label>
+              <label>Название<input name="name" required maxlength="80" placeholder="название проекта"></label>
             </fieldset>
             <fieldset class="project-step" ?hidden=${step !== 2}>
-              <legend>2 из 3. описание и ссылки</legend>
               <label>Описание<textarea name="description" maxlength="160" rows="2" placeholder="Что ты хочешь сделать?"></textarea></label>
               <details class="project-links"><summary>Добавить ссылку</summary>
                 ${Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => html`<div class="project-link-row">
@@ -1112,7 +1165,6 @@ class LearnApp extends LitElement {
               </details>
             </fieldset>
             <fieldset class="project-step" ?hidden=${step !== 3}>
-              <legend>3 из 3. папка</legend>
               <div class="folder-options">${folders.map(([id, name]) => html`
                 <label><input type="radio" name="folder" value=${id} ?checked=${id === 'gel'}>
                   <img src=${step === 3 ? '/folders/' + id + '.webp' : nothing} alt=""><span>${name}</span></label>`)}</div>
@@ -1126,17 +1178,6 @@ class LearnApp extends LitElement {
           : type === 'photo' ? html`
             <label>Фото процесса<input name="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" required></label>
             <label>Подпись<input name="caption" maxlength="120" placeholder="Над чем работаешь?"></label>`
-          : type === 'score' && softScore ? html`
-            <p>Примерная оценка теста: ${this.person.soft[index]}%</p>
-            <label>Оценка ментора<select name="score" required>
-              ${[
-                'Редко, даже с поддержкой', 'С подсказками', 'Устойчиво в типовых ситуациях',
-                'Самостоятельно в сложных ситуациях', 'Переносит навык в новые ситуации и помогает другим',
-              ].map((label, index) => html`<option value=${index + 1} ?selected=${(previousScore?.score ?? 3) === index + 1}>${index + 1}. ${label}</option>`)}
-            </select></label>
-            <label>Что ты заметил в работе?<input name="reason" required maxlength="180" .value=${previousScore?.reason ?? ''}></label>`
-          : type === 'score' ? html`
-            <label>Уровень от 0 до 100<input name="score" type="number" min="0" max="100" step="1" required .value=${String(this.person.hard[key].levels[index])}></label>`
           : html`
             ${type === 'create' ? html`<label>Задача<input name="title" required maxlength="100"></label>` : html`<p>${task.title}</p>`}
             <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.date}></label>
@@ -1174,7 +1215,9 @@ class LearnApp extends LitElement {
     this.formBusy = true;
     this.formError = '';
     try {
-      if (type === 'hard') {
+      if (type === 'title') {
+        await this.mutate('title', { title: value('title') });
+      } else if (type === 'hard') {
         await this.mutate('hard', { name: value('name'), skills: value('skills').split(',') });
       } else if (type === 'photo') {
         const file = data.get('photo');
@@ -1183,9 +1226,6 @@ class LearnApp extends LitElement {
         }
         await this.mutate('photo', { mime: file.type, contents: await encodePhoto(file), caption: value('caption') });
         this.photoError = '';
-      } else if (type === 'score') {
-        const { reached } = await this.mutate('score', { key, index, score: Number(value('score')), reason: value('reason') });
-        if (reached) this.celebration = { person: this.personId, key };
       } else if (type === 'new-project') {
         await this.mutate('project', {
           name: value('name'), description: value('description'), folder: value('folder'), links: Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => ({

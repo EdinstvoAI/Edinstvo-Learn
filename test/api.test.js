@@ -46,7 +46,7 @@ test('reports a missing database', async () => {
 test('state without a session is empty', async () => {
   const { status, data } = await call(makeApi({}, fakeDatabase(null)), { url: '/state' });
   assert.equal(status, 200);
-  assert.deepEqual(data, { account: null, people: [], tasks: [], telegram: false });
+  assert.deepEqual(data, { account: null, people: [], tasks: [], telegram: false, local: false });
 });
 
 test('pending mentee sees no data', async () => {
@@ -112,4 +112,13 @@ test('unknown routes return 404', async () => {
   assert.equal((await call(api, { url: '/nope', headers: { cookie } })).status, 404);
   assert.equal((await call(api, post('/people/not-a-uuid/layers', {}))).status, 404);
   assert.equal((await call(api, { url: '/photo/not-a-uuid', headers: { cookie } })).status, 404);
+});
+
+test('local join is closed outside local mode and checks the code format', async () => {
+  assert.equal((await call(makeApi({}, fakeDatabase(null)), post('/local/join', { name: 'Аня', code: '123456' }))).status, 403);
+  const publicEnv = { LOCAL_SETUP_TOKEN: 'x'.repeat(64), PUBLIC_ORIGIN: 'https://learn.example' };
+  assert.equal((await call(makeApi(publicEnv, fakeDatabase(null)), post('/local/join', { name: 'Аня' }, { origin: 'https://learn.example' }))).status, 403);
+  const { status, data } = await call(makeApi({}, fakeDatabase(null)), { url: '/state' });
+  assert.equal(status, 200);
+  assert.equal(data.local, false);
 });

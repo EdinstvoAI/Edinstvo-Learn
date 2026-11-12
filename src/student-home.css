@@ -769,3 +769,67 @@ learn-app .calendar-top h2::first-letter, learn-app .calendar-agenda-title h2::f
 
 .assessment .encouragement-scene { width: 200px; height: 200px; margin: -8px auto -12px; }
 .assessment-finale { position: fixed; inset: 0; z-index: 50; }
+
+/* Проход по кадрам Figma от 2026-11-12. Перекрывает старые правила выше. */
+learn-app .avatar-image { overflow: hidden; }
+learn-app .summary-avatar .avatar-image { display: inline-grid; place-items: center; width: 30px; height: 30px; vertical-align: -.3em; border-radius: 50%; background: #e4e4e4; font-size: 11px; }
+learn-app .summary-avatar img, learn-app .assessment-emblem .avatar-image img, learn-app .encouragement .avatar-image img { width: 100%; height: 100%; object-fit: cover; }
+learn-app .assessment-emblem .avatar-image { display: grid; place-items: center; width: 82px; height: 82px; border-radius: 50%; background: #dcdcdc; font-size: 24px; position: relative; overflow: hidden; }
+learn-app .assessment-emblem .avatar-image img { position: absolute; inset: 0; }
+learn-app .assessment .encouragement .avatar-image { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: #444; color: #fff; font-size: 11px; position: relative; }
+learn-app .assessment .encouragement .avatar-image img { position: absolute; inset: 0; filter: none; }
+.assessment-burst { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+
+/* Карточка профиля: оранжевая, с настоящей толщиной из слоёв, вращается как 3D-объект. */
+.profile-card { width: min(100%, 380px); aspect-ratio: 1.53; margin: 18px auto 0; perspective: 1100px; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.profile-card:focus-visible { outline: 2px solid #222; outline-offset: 6px; border-radius: 34px; }
+.profile-card-3d { position: relative; height: 100%; transform-style: preserve-3d;
+  transform: rotateX(var(--turn-x, 0deg)) rotateY(var(--turn-y, 0deg)); transition: transform .7s cubic-bezier(.2,.75,.2,1); }
+.profile-card-3d.is-dragging { transition: none; cursor: grabbing; }
+.card-slice { position: absolute; inset: 0; border-radius: 34px; background: #b8361f; transform: translateZ(calc((var(--slice) - 5.5) * 1px)); }
+.card-face { position: absolute; inset: 0; display: grid; align-content: start; gap: 2px; padding: 26px 24px; border-radius: 34px; color: #fff;
+  background: linear-gradient(135deg, #ee5a3d, #e34b31 55%, #d8432a); backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.card-front { transform: translateZ(6.5px); }
+.card-back { transform: rotateY(180deg) translateZ(6.5px); align-content: center; justify-items: start; gap: 8px; }
+.card-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 30%, #ffffff2e 45%, transparent 60%); }
+.card-role { font-size: 22px; line-height: 1.1; }
+.card-face h1 { margin: 0; color: #fff; font-size: clamp(40px, 13vw, 56px); line-height: .95; font-weight: 600; overflow-wrap: anywhere; }
+.card-face .profile-contact { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; color: #ffe1d8; font-size: 14px; }
+.card-back strong { font: 26px 'Martian Mono', monospace; letter-spacing: -.06em; }
+.card-back span:last-child { max-width: 240px; color: #ffe1d8; font-size: 14px; }
+.profile-title-edit { display: block; margin: 10px auto 0; }
+
+/* Воспоминания. */
+learn-app .memories { margin-top: 34px; }
+learn-app .memories-header { display: grid; justify-items: center; gap: 0; text-align: center; }
+learn-app .memories-header h2 { font-size: 18px; font-weight: 600; }
+learn-app .memories-header p { margin: 0; color: #777; font-size: 12px; }
+learn-app .memories .photo-grid { display: grid; grid-template-columns: minmax(0, .52fr) minmax(0, 1fr); gap: 14px 12px; margin-top: 18px; align-items: start; }
+learn-app .memories figure { margin: 0; }
+learn-app .memories figure:first-child { grid-column: auto; }
+learn-app .memories figure img, learn-app .memories figure:first-child img { width: 100%; aspect-ratio: 1.58; object-fit: cover; border-radius: 22px; }
+learn-app .memories .photo-grid > :nth-child(3n) { grid-column: 1 / -1; }
+.memories-add { display: grid; place-content: center; justify-items: center; gap: 2px; min-height: 0; aspect-ratio: .82; border: 0; border-radius: 22px; background: #fff; color: #777; font: inherit; font-size: 12px; cursor: pointer; box-shadow: 0 1px 0 #0000000a; }
+.memories-add span { font-size: 16px; }
+learn-app .memories figcaption { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; margin-top: 6px; font-size: 12px; }
+
+/* Календарь. Название месяца — Martian, вытянутый по вертикали: обычный шрифт и трансформация без отдельных картинок. */
+.cal-card, .cal-list { margin: 0 6px 12px; padding: 22px 20px 16px; border-radius: 34px; background: #f8f8f8; }
+.cal-month { margin: 0 0 22px; font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -.05em; transform: scale(.82, 1.5); transform-origin: left top; height: 54px; }
+.cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-week button { display: grid; justify-items: center; gap: 10px; padding: 0; border: 0; background: none; color: #111; font: inherit; cursor: pointer; }
+.cal-week small { font-size: 15px; font-weight: 600; }
+.cal-week strong { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #111; color: #fff; font-size: 18px; font-weight: 500; position: relative; }
+.cal-week button[aria-pressed=true] strong { background: #e44d32; }
+.cal-week .is-busy strong::after { content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .75; }
+.cal-nav { display: flex; justify-content: space-between; margin-top: 10px; }
+.cal-nav .text-button { min-height: 32px; padding: 0; color: #888; font-size: 12px; }
+.cal-toggle { display: grid; grid-template-columns: 1fr 1fr; padding: 0; margin-bottom: 14px; border-radius: 999px; background: #fff; }
+.cal-toggle button { min-height: 56px; border: 0; border-radius: 999px; background: transparent; color: #111; font: inherit; font-size: 22px; font-weight: 600; cursor: pointer; }
+.cal-toggle button[aria-selected=true] { background: #e44d32; color: #fff; }
+.cal-list .agenda { display: grid; gap: 6px; }
+.cal-add { display: block; margin: 10px auto 0; }
+learn-app .memories { padding: 22px 16px; border-radius: 34px; background: #f8f8f8; }
+.skill-percent { display: inline-flex; align-items: center; gap: 2px; flex: none; font: 14px 'Martian Mono', monospace; }
+.skill-percent input { width: 58px; min-height: 36px; padding: 0 6px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font: inherit; text-align: right; }
+.skill-percent input:focus-visible { outline: 2px solid #e44d32; outline-offset: 1px; }

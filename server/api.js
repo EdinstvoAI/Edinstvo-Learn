@@ -123,8 +123,9 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         requireInput(name, 'Укажи LOCAL_MENTOR_NAME для локального аккаунта.');
         return (await client.query("INSERT INTO accounts (role, name) VALUES ('mentor', $1) RETURNING id", [name])).rows[0].id;
       }
-      if (route === '/local/student') {
-        allowed(allowLocal && safeEqual(data.token, env.LOCAL_SETUP_TOKEN));
+      if (route === '/local/student' || route === '/local/join') {
+        // /local/join — вход менти с первой страницы в локальном запуске: имя и код без ссылки с токеном.
+        allowed(allowLocal && (route === '/local/join' || safeEqual(data.token, env.LOCAL_SETUP_TOKEN)));
         const name = shortText(data.name, 100);
         requireInput(name);
         const localId = hash(name.normalize('NFC').toLowerCase());
@@ -168,7 +169,7 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
   }
 
   async function state(client, actor) {
-    if (!actor || actor.pending) return { account: actor, people: [], tasks: [], telegram: Boolean(env.TELEGRAM_BOT_TOKEN) };
+    if (!actor || actor.pending) return { account: actor, people: [], tasks: [], telegram: Boolean(env.TELEGRAM_BOT_TOKEN), local: allowLocal };
     const { rows } = await client.query(`
       SELECT id, name, profile, access_granted_at, created_at, telegram_photo_url, telegram_username FROM accounts WHERE role = 'mentee' AND (id = $1 OR mentor_id = $1) ORDER BY name
     `, [actor.id]);
@@ -184,6 +185,7 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
     return {
       account: actor,
       telegram: Boolean(env.TELEGRAM_BOT_TOKEN),
+      local: allowLocal,
       people: rows.map(({ id, name, profile: { skillGrowth, ...profile }, access_granted_at, created_at, telegram_photo_url, telegram_username }) => ({
         id, name, pending: !access_granted_at, initials: name.split(/\s+/).slice(0, 2).map((word) => word[0]).join(''),
         createdAt: created_at,
@@ -217,6 +219,12 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         allowed(!mentor);
         requireInput(['sky', 'mint', 'violet'].includes(data.cover));
         profile.layers = { cover: data.cover, stickers: data.stickers === true, projects: data.projects === true };
+      } else if (action === 'title') {
+        // Роль на карточке профиля, например «дизайнер». Её задаёт ментор.
+        allowed(mentor);
+        const title = lowerText(data.title, 40);
+        requireInput(title, 'Укажи роль.');
+        profile.title = title;
       } else if (action === 'hard') {
         allowed(mentor);
         const name = lowerText(data.name, 70);
@@ -235,14 +243,17 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         let to;
         let reached = false;
         if (key === 'soft') {
+          // Ментор ставит софт в процентах. Старые записи хранили оценку 1–5, она читается как score * 20.
           const reason = lowerText(data.reason, 180);
-          requireInput(profile.soft && index < 10 && score >= 1 && score <= 5 && reason);
+          requireInput(profile.soft && index < 10 && score >= 0 && score <= 100);
           profile.mentorScores ??= {};
           const previous = profile.mentorScores[index];
-          from = previous ? previous.score * 20 : profile.soft[index];
-          to = score * 20;
-          const history = previous ? [...(previous.history ?? []), { score: previous.score, reason: previous.reason, updatedAt: previous.updatedAt }] : [];
-          profile.mentorScores[index] = { score, reason, updatedAt: new Date().toISOString(), history };
+          from = previous ? previous.percent ?? previous.score * 20 : profile.soft[index];
+          to = score;
+          const history = previous ? [...(previous.history ?? []), {
+            percent: previous.percent ?? previous.score * 20, reason: previous.reason, updatedAt: previous.updatedAt,
+          }] : [];
+          profile.mentorScores[index] = { percent: score, reason, updatedAt: new Date().toISOString(), history };
         } else {
           const group = Number.isInteger(key) ? profile.hard?.[key] : null;
           requireInput(group && index < group.levels.length && score >= 0 && score <= 100);
@@ -343,8 +354,14 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
           allowed(!origin || origin === (env.PUBLIC_ORIGIN || 'http://' + request.headers.host));
           requireInput(request.headers['content-type']?.startsWith('application/json'));
           const data = await bodyOf(request);
-          if (['/local', '/local/student', '/telegram', '/mentor'].includes(route)) {
-            await session(client, response, await signIn(route, data));
+          if (['/local', '/local/student', '/local/join', '/telegram', '/mentor'].includes(route)) {
+            const accountId = await signIn(route, data);
+            if (route === '/local/join') {
+              // Код нужен один раз, при первой активации. Сессия появляется только после верного кода.
+              const pending = (await client.query('SELECT access_granted_at IS NULL AS pending FROM accounts WHERE id = $1', [accountId])).rows[0].pending;
+              if (pending) await unlock({ id: accountId }, data.code);
+            }
+            await session(client, response, accountId);
             json(response, 200, await state(client, await actorFor(client, {
               headers: { cookie: response.getHeader('Set-Cookie').split(';')[0] },
             })));

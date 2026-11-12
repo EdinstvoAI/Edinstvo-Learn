@@ -113,6 +113,19 @@ class LearnApp extends LitElement {
     };
   }
 
+  lowerTextInput(event) {
+    const field = event.target;
+    if (event.isComposing || !field.matches('textarea, input[type="text"], input:not([type])')) return;
+    const value = field.value;
+    const lower = value.toLowerCase();
+    if (value === lower) return;
+    const start = value.slice(0, field.selectionStart).toLowerCase().length;
+    const end = value.slice(0, field.selectionEnd).toLowerCase().length;
+    const direction = field.selectionDirection;
+    field.value = lower;
+    field.setSelectionRange(start, end, direction);
+  }
+
   createRenderRoot() { return this; }
 
   connectedCallback() {
@@ -121,6 +134,8 @@ class LearnApp extends LitElement {
     window.addEventListener('deviceorientation', this.orientWheel);
     window.addEventListener('scroll', this.onPageScroll, { passive: true });
     this.addEventListener('pointerup', this.onMotionGesture);
+    this.addEventListener('input', this.lowerTextInput);
+    this.addEventListener('compositionend', this.lowerTextInput);
   }
 
   disconnectedCallback() {
@@ -130,6 +145,8 @@ class LearnApp extends LitElement {
     window.removeEventListener('deviceorientation', this.orientWheel);
     window.removeEventListener('scroll', this.onPageScroll);
     this.removeEventListener('pointerup', this.onMotionGesture);
+    this.removeEventListener('input', this.lowerTextInput);
+    this.removeEventListener('compositionend', this.lowerTextInput);
     if (this.telegramOrientation) {
       window.Telegram.WebApp.offEvent('deviceOrientationChanged', this.telegramOrientation);
       window.Telegram.WebApp.DeviceOrientation.stop();
@@ -351,7 +368,7 @@ class LearnApp extends LitElement {
       return html`<main class="sign-in">
         ${this.wordmark()}
         ${this.bootStatus === 'loading' ? html`<p role="status">Открываем пространство…</p>`
-          : this.account?.pending ? html`<form @submit=${(event) => this.activate(event)}>
+          : this.account?.pending ? html`<form autocapitalize="none" @submit=${(event) => this.activate(event)}>
             <h1>Твой код доступа</h1><p>Возьми сегодняшний код у ментора.</p>
             <label>Код<input name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" maxlength="6"></label>
             <button class="primary" type="submit" ?disabled=${this.formBusy}>Продолжить</button>
@@ -978,13 +995,13 @@ class LearnApp extends LitElement {
               <time datetime=${comment.createdAt}>${dayLabel.format(new Date(comment.createdAt))}</time>
               <p>${comment.text}</p></li>`)}
           </ul>` : html`<p class="empty">Пока нет комментариев.</p>`}
-          ${this.role === 'mentor' ? html`<form @submit=${(event) => this.addProjectComment(event, project)}>
+          ${this.role === 'mentor' ? html`<form autocapitalize="none" @submit=${(event) => this.addProjectComment(event, project)}>
             <label>Комментарий<textarea name="text" maxlength="1000" rows="2" required></textarea></label>
             ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
             <button class="primary" ?disabled=${this.formBusy}>Добавить комментарий</button>
           </form>` : nothing}
         </section>`
-        : html`<form @submit=${(event) => this.save(event)}>
+        : html`<form autocapitalize="none" @submit=${(event) => this.save(event)}>
           ${type === 'hard' ? html`
             <label>Название<input name="name" required maxlength="70"></label>
             <label>До 10 навыков через запятую<input name="skills" required maxlength="300" placeholder="Git, Docker, LLM"></label>`

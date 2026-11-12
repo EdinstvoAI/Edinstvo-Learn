@@ -11,6 +11,7 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const validDate = (value) => typeof value === 'string' && datePattern.test(value) &&
   Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+const lowerText = (value, max) => typeof value === 'string' ? value.trim().toLowerCase().slice(0, max) : '';
 const shortText = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 
 class ApiError extends Error {
@@ -280,8 +281,8 @@ export function makeApi(env) {
         profile.layers = { cover: data.cover, stickers: data.stickers === true, projects: data.projects === true };
       } else if (action === 'hard') {
         allowed(mentor);
-        const name = shortText(data.name, 70);
-        const skills = Array.isArray(data.skills) ? [...new Set(data.skills.map((item) => shortText(item, 70)).filter(Boolean))] : [];
+        const name = lowerText(data.name, 70);
+        const skills = Array.isArray(data.skills) ? [...new Set(data.skills.map((item) => lowerText(item, 70)).filter(Boolean))] : [];
         requireInput(name && skills.length > 0 && skills.length <= 10, 'Укажи название и до 10 навыков.');
         profile.hard = [...(profile.hard ?? []), { name, skills, levels: skills.map(() => 0) }];
       } else if (action === 'growth-seen') {
@@ -296,7 +297,7 @@ export function makeApi(env) {
         let to;
         let reached = false;
         if (key === 'soft') {
-          const reason = shortText(data.reason, 180);
+          const reason = lowerText(data.reason, 180);
           requireInput(profile.soft && index < 10 && score >= 1 && score <= 5 && reason);
           profile.mentorScores ??= {};
           const previous = profile.mentorScores[index];
@@ -321,16 +322,16 @@ export function makeApi(env) {
       } else if (action === 'project-comment') {
         allowed(mentor);
         const project = profile.projects?.find((item) => item.id === data.projectId);
-        const text = shortText(data.text, 1000);
+        const text = lowerText(data.text, 1000);
         requireInput(project && text, 'Укажи проект и текст комментария.');
         project.comments = [...(project.comments ?? []), {
           id: randomUUID(), text, author: actor.name, createdAt: new Date().toISOString(),
         }];
       } else if (action === 'project') {
-        const name = shortText(data.name, 80);
+        const name = lowerText(data.name, 80);
         requireInput(name && (!data.folder || folderNames.has(data.folder)));
         profile.projects = [...(profile.projects ?? []), {
-          id: randomUUID(), name, folder: data.folder || 'gel', description: shortText(data.description, 160), sources: projectSources(data),
+          id: randomUUID(), name, folder: data.folder || 'gel', description: lowerText(data.description, 160), sources: projectSources(data),
         }];
       } else if (action === 'photo') {
         allowed(!mentor);
@@ -338,7 +339,7 @@ export function makeApi(env) {
         const contents = Buffer.from(data.contents, 'base64');
         requireInput(contents.length > 0 && contents.length <= 10 * 1024 * 1024, 'Размер фото должен быть до 10 МБ.');
         await client.query('INSERT INTO photos (person, mime, contents, caption) VALUES ($1, $2, $3, $4)',
-          [person, data.mime, contents, shortText(data.caption, 120)]);
+          [person, data.mime, contents, lowerText(data.caption, 120)]);
         return {};
       } else if (action === 'remove-photo') {
         allowed(!mentor);
@@ -350,7 +351,7 @@ export function makeApi(env) {
         requireInput(!projectId || (profile.projects ?? []).some((project) => project.id === projectId),
           'Выбери проект этого ученика.');
         if (action === 'create-task') {
-          const title = shortText(data.title, 100);
+          const title = lowerText(data.title, 100);
           requireInput(title && validDate(data.date) && timePattern.test(data.time));
           await client.query('INSERT INTO tasks (person, title, day, time, movable, project_id) VALUES ($1, $2, $3, $4, $5, $6)',
             [person, title, data.date, data.time, !mentor || data.movable === true, projectId]);

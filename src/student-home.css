@@ -697,5 +697,5 @@ mentor-note { display: block; }
 .assessment-emblem skill-celebration[confetti] { inset: -44px; }
 
 learn-app { text-transform: lowercase; }
-learn-app :is(input, textarea, select, pre, code) { text-transform: none; }
+learn-app :is(input[type=url], pre, code) { text-transform: none; }
 learn-app .calendar-top h2::first-letter, learn-app .calendar-agenda-title h2::first-letter { text-transform: lowercase; }

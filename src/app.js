@@ -37,6 +37,16 @@ const today = () => {
   return formatDate(new Date(date.getTime() - date.getTimezoneOffset() * 60_000));
 };
 const emptyProfile = { soft: null, hard: [], projects: [], photos: [] };
+function shuffledAnswers(questionIndex, answers) {
+  const order = answers.map((_, index) => index);
+  let seed = (questionIndex + 1) * 7919;
+  for (let index = order.length - 1; index > 0; index -= 1) {
+    seed = (seed * 48271) % 2147483647;
+    const swap = seed % (index + 1);
+    [order[index], order[swap]] = [order[swap], order[index]];
+  }
+  return order.map((index) => ({ index, answer: answers[index] }));
+}
 
 class LearnApp extends LitElement {
   static properties = {
@@ -54,6 +64,7 @@ class LearnApp extends LitElement {
     modal: { state: true },
     answers: { state: true },
     pendingAnswer: { state: true },
+    assessmentPause: { state: true },
     assessmentStatus: { state: true },
     formError: { state: true },
     celebration: { state: true },
@@ -66,6 +77,7 @@ class LearnApp extends LitElement {
     motionState: { state: true },
     navMotion: { state: true },
     wheelMotion: { state: true },
+    selectedProject: { state: true },
     profileFlipped: { state: true },
   };
 
@@ -85,6 +97,7 @@ class LearnApp extends LitElement {
     this.modal = null;
     this.answers = [];
     this.pendingAnswer = null;
+    this.assessmentPause = 0;
     this.assessmentStatus = 'intro';
     this.playedGrowth = new Set();
     this.formError = '';
@@ -94,6 +107,7 @@ class LearnApp extends LitElement {
     this.activeWheel = 0;
     this.activeSector = -1;
     this.wheelMotion = 0;
+    this.selectedProject = null;
     this.profileFlipped = false;
     this.motionState = typeof globalThis.DeviceOrientationEvent?.requestPermission === 'function' ? 'ask' : 'ready';
     this.orientWheel = (event) => this.onOrientation(event);
@@ -335,12 +349,8 @@ class LearnApp extends LitElement {
   }
 
   nav() {
-    const glass = { light: '0.8', refraction: '0.8', depth: '20', dispersion: '0.5', frost: '0.7',
-      splay: '0', tint: '#fff', transparency: '0.9' };
     return html`<div class="nav-material">
-      <edinstvo-glass class="mobile-nav" light=${glass.light} light-angle="0" refraction=${glass.refraction}
-        depth=${glass.depth} dispersion=${glass.dispersion} frost=${glass.frost} splay=${glass.splay}
-        tint=${glass.tint} transparency=${glass.transparency}>
+      <div class="mobile-nav">
         <nav class="nav" aria-label="Разделы">
           ${sections.map(([id, title, asset]) => html`<button class=${this.page === id ? 'active' : ''}
             aria-label=${title} aria-current=${this.page === id ? 'page' : nothing}
@@ -349,13 +359,11 @@ class LearnApp extends LitElement {
             ${this.page === id && this.navMotion === id ? html`<skill-celebration class="nav-burst" color="purple" compact></skill-celebration>` : nothing}
           </button>`)}
         </nav>
-      </edinstvo-glass>
-      <edinstvo-glass class="profile-glass" light=${glass.light} light-angle="-45" refraction=${glass.refraction}
-        depth=${glass.depth} dispersion=${glass.dispersion} frost=${glass.frost} splay=${glass.splay}
-        tint=${glass.tint} transparency=${glass.transparency}>
+      </div>
+      <div class="profile-glass">
         <button class="profile-tab" aria-label="Профиль" aria-current=${this.page === 'profile' ? 'page' : nothing}
           @click=${() => this.go('profile')}>${this.avatar(this.person)}</button>
-      </edinstvo-glass>
+      </div>
     </div>`;
   }
 
@@ -385,7 +393,7 @@ class LearnApp extends LitElement {
     }
     const isHome = this.page === 'home';
     const screen = {
-      home: () => this.home(), profile: () => this.profile(), skills: () => this.skills(),
+      home: () => this.home(), profile: () => this.profile(), skills: () => this.skills(), project: () => this.projectPage(),
       students: () => this.students(), account: () => this.adminAccount(),
       calendar: () => this.calendar(), projects: () => this.projects(), assessment: () => this.assessment(),
     };
@@ -521,7 +529,7 @@ class LearnApp extends LitElement {
           </figcaption>
           ${this.role === 'mentee' ? html`<button class="text-button" aria-label=${'Удалить фото от ' + dayLabel.format(parseDate(photo.date))}
             @click=${() => this.removePhoto(photo)}>Удалить</button>` : nothing}
-        </figure>`)}</div>` : html`<p class="memories-empty">Здесь будут фотографии рабочего процесса.</p>`}
+        </figure>`)}</div>` : html`<button class="memories-empty" @click=${() => this.open({ type: 'photo' })}>добавить фото</button>`}
         ${this.photoError ? html`<p class="form-error photo-error" role="alert">${this.photoError}</p>` : nothing}
       </section>`;
   }
@@ -606,9 +614,9 @@ class LearnApp extends LitElement {
         <div class="wheel-switch" aria-label="Тип навыков" role="group">
           <div class="wheel-tabs">
             <button aria-pressed=${this.activeWheel === 0} @click=${() => this.setWheel(0)}>Софты</button>
-            <button aria-pressed=${this.activeWheel > 0} @click=${() => {
+            ${this.person.hard.length ? html`<button aria-pressed=${this.activeWheel > 0} @click=${() => {
               if (this.activeWheel === 0) this.setWheel(1);
-            }}>Харды</button>
+            }}>Харды</button>` : nothing}
           </div>
         </div>
       </div>
@@ -616,8 +624,8 @@ class LearnApp extends LitElement {
       ${this.activeSector >= 0 ? keyed(this.activeSector, html`<div class="skill-readout" role="status">
         <span>${group.labels[this.activeSector]}</span>
         <strong>${group.levels[this.activeSector] === null ? 'Нет оценки' : group.levels[this.activeSector] + '%'}</strong>
+        <skill-celebration class="skill-reveal" color=${group.color} compact></skill-celebration>
       </div>`) : nothing}
-      ${this.activeWheel > 0 && !group.labels.length ? html`<p class="wheel-value">Круг хардов ещё не настроен.</p>` : nothing}
     </section>`;
   }
 
@@ -779,7 +787,7 @@ class LearnApp extends LitElement {
           <button class="primary" @click=${() => this.go('home')}>Посмотреть навыки</button>`}
       </section>`;
     }
-    const checkpoint = [10, 15, 20, 25].includes(this.answers.length);
+    const checkpoint = Boolean(this.assessmentPause);
     return html`<section class="assessment">
       <div class="assessment-progress">
         <strong>${Math.min(this.answers.length + 1, questions.length)} из ${questions.length}</strong>
@@ -788,16 +796,18 @@ class LearnApp extends LitElement {
           this.answers = this.answers.slice(0, -1);
         }}>Назад</button>` : nothing}
       </div>
-      <progress aria-label="Отвечено вопросов" max=${questions.length} value=${this.answers.length}></progress>
+      <div class="assessment-segments" aria-label=${`Отвечено вопросов: ${this.answers.length} из ${questions.length}`}>
+        ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
+      </div>
       ${checkpoint ? keyed(remaining, html`<div class="encouragement" role="status"><img src="/mobile-home/star.png" alt="">
-        <p>${remaining <= 5 ? 'Молодец, финальный рывок!' : remaining === 10 ? 'Ещё чуть-чуть!' : 'Отлично идёшь!'} <strong>Осталось ${remaining} вопросов.</strong></p>
+        <p>${remaining <= 5 ? 'Молодец, финальный рывок!' : 'Отлично идёшь!'}</p>
         <skill-celebration color="ink" compact ?fly=${remaining === 10 || remaining === 5} ?confetti=${remaining === 5}></skill-celebration></div>`) : nothing}
-      ${question ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
-        ${question.answers.map((answer, index) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
+      ${question && !this.assessmentPause ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
+        ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
       </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
       ${status === 'error' ? html`<p role="alert">Результат пока не сохранился. Ответы на месте, попробуй ещё раз.</p>` : nothing}
-      <button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
-        @click=${() => this.nextAnswer()}>${remaining > 1 ? 'Дальше' : 'Сохранить результат'}</button>
+      ${this.assessmentPause ? html`<button class="primary" @click=${() => { this.assessmentPause = 0; }}>продолжить</button>` : html`<button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
+        @click=${() => this.nextAnswer()}>${remaining > 1 ? 'Дальше' : 'Сохранить результат'}</button>`}
     </section>`;
   }
 
@@ -807,6 +817,10 @@ class LearnApp extends LitElement {
       if (this.pendingAnswer === null) return;
       this.answers = [...this.answers, this.pendingAnswer];
       this.pendingAnswer = null;
+      if ([10, 20, 25].includes(this.answers.length)) {
+        this.assessmentPause = this.answers.length;
+        return;
+      }
     }
     if (this.answers.length < questions.length) {
       this.scrollToTop();
@@ -818,7 +832,7 @@ class LearnApp extends LitElement {
     try {
       await this.mutate('assessment', { answers: this.answers });
       await this.refresh();
-      if (this.personId === id && this.page === 'assessment') this.assessmentStatus = 'done';
+      if (this.personId === id && this.page === 'assessment') this.go('home');
     } catch {
       await this.refresh().catch(() => {});
       if (this.personId === id && this.page === 'assessment') this.assessmentStatus = this.person.soft ? 'done' : 'error';
@@ -897,7 +911,7 @@ class LearnApp extends LitElement {
     return html`<div class="agenda-row">
       <time class="agenda-time" datetime=${starts + 'T' + task.time}>${range || task.time}</time>
       <div><strong>${task.title}</strong>
-        ${project ? html`<button class="task-project" @click=${() => this.open({ type: 'project', project })}>${project.name}</button>` : nothing}
+        ${project ? html`<button class="task-project" @click=${() => { this.selectedProject = project; this.go('project'); }}>${project.name}</button>` : nothing}
         <p>${task.done ? 'Завершено' : editable ? 'Можно перенести' : 'Дата закреплена'}</p>
       </div>
       ${editable && !task.done ? html`<button class="round" aria-label=${'Перенести или привязать проект: ' + task.title}
@@ -931,11 +945,23 @@ class LearnApp extends LitElement {
 
   projectCard(project) {
     const folder = folders.some(([id]) => id === project.folder) ? project.folder : 'gel';
-    return html`<button class="project-folder" @click=${() => this.open({ type: 'project', project })}>
+    return html`<button class="project-folder" @click=${() => { this.selectedProject = project; this.go('project'); }}>
       <span class="folder-art"><img src=${'/folders/' + folder + '.webp'} alt="" loading="lazy"></span>
       <strong>${project.name}</strong>
       ${project.description ? html`<small>${project.description}</small>` : nothing}
     </button>`;
+  }
+
+  projectPage() {
+    const project = this.person.projects.find((item) => item.id === this.selectedProject?.id) ?? this.selectedProject;
+    if (!project) return this.projects();
+    return html`<button class="text-button project-back" @click=${() => this.go('projects')}>← проекты</button>
+      <section class="project-page"><h1>${project.name}</h1>
+        ${project.description ? html`<p>${project.description}</p>` : nothing}
+        <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
+        <section class="project-plan"><h2>задачи проекта</h2>${this.projectWeeks(project.id).length ? this.projectWeeks(project.id) : html`<p class="empty">пока нет задач.</p>`}</section>
+        <section class="project-comments"><h2>комментарии ментора</h2>${project.comments?.length ? html`<ul>${project.comments.map((comment) => html`<li><strong>${comment.author}</strong><p>${comment.text}</p></li>`)}</ul>` : html`<p class="empty">пока нет комментариев.</p>`}</section>
+      </section>`;
   }
 
   async open(modal, clear = true) {
@@ -967,7 +993,8 @@ class LearnApp extends LitElement {
       return html`<section class="project-week">
         <h4>${dayLabel.formatRange(monday, sunday)}</h4>
         ${tasks.map((task) => html`<button class="project-task" @click=${() => {
-          this.querySelector('dialog').close();
+          this.querySelector('dialog')?.close();
+          this.selectedProject = project;
           this.date = task.date;
           this.go('calendar');
         }}><strong>${task.title}${task.done ? ' ✓' : ''}</strong>
@@ -1039,25 +1066,29 @@ class LearnApp extends LitElement {
             <label>Название<input name="name" required maxlength="70"></label>
             <label>До 10 навыков через запятую<input name="skills" required maxlength="300" placeholder="Git, Docker, LLM"></label>`
           : type === 'new-project' ? html`
-            <fieldset class="project-step" ?hidden=${step === 2}>
-              <legend>1 из 2. О проекте</legend>
+            <fieldset class="project-step" ?hidden=${step !== 1}>
+              <legend>1 из 3. название</legend>
               <label>Название<input name="name" required maxlength="80" placeholder="Название проекта"></label>
+            </fieldset>
+            <fieldset class="project-step" ?hidden=${step !== 2}>
+              <legend>2 из 3. описание и ссылки</legend>
               <label>Описание<textarea name="description" maxlength="160" rows="2" placeholder="Что ты хочешь сделать?"></textarea></label>
-              <details class="project-links"><summary>Добавить ссылки</summary>
-                ${[1, 2, 3].map((index) => html`<div class="project-link-row">
+              <details class="project-links"><summary>Добавить ссылку</summary>
+                ${Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => html`<div class="project-link-row">
                   <label>название ссылки ${index}<input name=${'linkName' + index} maxlength="70" placeholder="например, репозиторий"></label>
                   <label>ссылка ${index}<input name=${'linkUrl' + index} type="url" maxlength="400" placeholder="https://"></label>
                 </div>`)}
+                ${(this.modal.linkCount ?? 1) < 3 ? html`<button class="text-button" type="button" @click=${() => { this.modal = { ...this.modal, linkCount: (this.modal.linkCount ?? 1) + 1 }; }}>+ добавить ещё ссылку</button>` : nothing}
               </details>
             </fieldset>
-            <fieldset class="project-step" ?hidden=${step !== 2}>
-              <legend>2 из 2. Дизайн папки</legend>
+            <fieldset class="project-step" ?hidden=${step !== 3}>
+              <legend>3 из 3. папка</legend>
               <div class="folder-options">${folders.map(([id, name]) => html`
                 <label><input type="radio" name="folder" value=${id} ?checked=${id === 'gel'}>
                   <img src=${step === 2 ? '/folders/' + id + '.webp' : nothing} alt=""><span>${name}</span></label>`)}</div>
             </fieldset>
-            ${step === 2 ? html`<button class="text-button project-back" type="button"
-              @click=${() => { this.modal = { ...this.modal, step: 1 }; }}>Назад к описанию</button>` : nothing}`
+            ${step > 1 ? html`<button class="text-button project-back" type="button"
+              @click=${() => { this.modal = { ...this.modal, step: step - 1 }; }}>Назад</button>` : nothing}`
           : type === 'link-existing' ? html`
             <label>Задача<select name="taskId" aria-label="Задача" required>
               ${this.linkableTasks().map((item) => html`<option value=${item.id}>${item.title}, ${dayLabel.format(parseDate(item.date))}</option>`)}
@@ -1097,13 +1128,13 @@ class LearnApp extends LitElement {
     event.preventDefault();
     if (this.formBusy) return;
     const { type, task, project, key, index, step } = this.modal;
-    if (type === 'new-project' && step !== 2) {
-      if (!event.currentTarget.elements.name.value.trim()) {
+    if (type === 'new-project' && step !== 3) {
+      if (step === 1 && !event.currentTarget.elements.name.value.trim()) {
         this.formError = 'Укажи название проекта.';
         return;
       }
       this.formError = '';
-      this.modal = { ...this.modal, step: 2 };
+      this.modal = { ...this.modal, step: step + 1 };
       await this.updateComplete;
       this.querySelector('#dialog-title')?.focus();
       return;
@@ -1127,7 +1158,7 @@ class LearnApp extends LitElement {
         if (reached) this.celebration = { person: this.personId, key };
       } else if (type === 'new-project') {
         await this.mutate('project', {
-          name: value('name'), description: value('description'), folder: value('folder'), links: [1, 2, 3].map((index) => ({
+          name: value('name'), description: value('description'), folder: value('folder'), links: Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => ({
             name: value('linkName' + index), url: value('linkUrl' + index),
           })),
         });

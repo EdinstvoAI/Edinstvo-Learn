@@ -54,6 +54,27 @@
   animation: skill-scan .58s cubic-bezier(.2,.6,.28,1) both;
   pointer-events: none;
 }
+.skill-readout::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 14% 28%, #b9f477 0 3px, transparent 4px),
+    radial-gradient(circle at 27% 70%, #d8ffab 0 2px, transparent 3px),
+    radial-gradient(circle at 47% 40%, #91ea42 0 3px, transparent 4px),
+    radial-gradient(circle at 68% 76%, #c6ff8d 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 22%, #8ee93b 0 3px, transparent 4px),
+    radial-gradient(circle at 92% 62%, #d8ffab 0 2px, transparent 3px);
+  animation: skill-pixels .62s cubic-bezier(.18,.72,.25,1) both;
+}
+@keyframes skill-pixels {
+  0% { opacity: 0; transform: translateX(-14px) scale(.7); }
+  28% { opacity: .95; }
+  72% { opacity: .55; transform: translateX(6px) scale(1); }
+  100% { opacity: 0; transform: translateX(18px) scale(.8); }
+}
 @keyframes skill-scan {
   from { left: 0; opacity: .9; }
   85% { opacity: .6; }
@@ -164,7 +185,7 @@ mentor-note { display: block; }
   .student-home .home-projects { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .skill-readout::after { display: none; }
+  .skill-readout::after, .skill-readout::before { display: none; }
 }
 .student-shell { height: var(--tg-viewport-stable-height, 100dvh); display: grid; grid-template-rows: minmax(0,1fr) auto; }
 .student-scroll { min-height: 0; overflow: auto; overscroll-behavior-y: contain; }
@@ -192,9 +213,12 @@ mentor-note { display: block; }
 .home-signature .wordmark { transform: scale(.42); }
 .student-home .helper-panel { padding: 8px 10px 4px; border-radius: 22px; background: var(--stone); }
 .student-home .wheel-switch { --glass-radius: 16px; --glass-fallback: #ffffffd8; }
+.student-home .wheel-switch-row { margin-top: 14px; }
 .student-home .wheel-tabs { display: flex; gap: 2px; padding: 2px; }
 .student-home .wheel-tabs button { min-height: 44px; padding: 0 20px; font-size: 15px; color: #655e6d; }
 .student-home .wheel-tabs button[aria-pressed=true] { background: #ebe5f6; color: #483570; }
+.student-home .wheel-tabs button { background: transparent; border-radius: 999px; }
+.student-home .wheel-switch { --glass-fallback: transparent; }
 .student-home .wheel-stage { max-width: 276px; aspect-ratio: 1.26; }
 .student-home .wheel-disc { width: 74%; }
 .student-home .wheel-base {
@@ -479,6 +503,9 @@ mentor-note { display: block; }
 .student-shell .week button { background: #f7f7f9; min-height: 60px; }
 .student-shell .week button[aria-current=date]:not([aria-pressed=true]) { color: #69459c; background: #f3eafa; }
 .calendar-agenda-title { margin: 14px 2px 8px; }
+.calendar-filters { display: flex; gap: 8px; padding: 8px 2px 2px; overflow-x: auto; scrollbar-width: none; }
+.calendar-filters button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: #f1f1f1; color: #6a6870; font: inherit; font-size: 13px; white-space: nowrap; }
+.calendar-filters button[aria-selected=true] { background: #202024; color: #fff; }
 .calendar-agenda-title h2 { font-size: 19px; }
 .calendar-agenda-title .primary { min-height: 42px; flex: none; padding-inline: 12px; }
 .agenda-row .round { border: 0; width: auto; min-height: 38px; padding-inline: 8px; background: #f3f0f7; font-size: 12px; }
@@ -555,7 +582,7 @@ mentor-note { display: block; }
 }
 .student-dock .mobile-nav::part(content), .profile-glass::part(content) { height: 53px; }
 
-.student-home .home-chart-slot { background: transparent; padding: 8px 0 0; min-height: 0; }
+.student-home .home-chart-slot { background: var(--stone); padding: 8px 0 16px; min-height: 0; }
 .student-home .home-inner-sheet { background: #fff; }
 .student-home .wheel-base, .student-home .purple .wheel-base { background: transparent; box-shadow: none; }
 .student-home .home-chart-slot .wheel-stage {
@@ -651,6 +678,34 @@ mentor-note { display: block; }
   30%, 100% { opacity: 0; transform: scale(.98) skewX(1deg); }
 }
 
+.profile-metal {
+  width: min(100%, 370px);
+  min-height: 238px;
+  margin: 20px auto 0;
+  perspective: 1100px;
+  cursor: pointer;
+}
+.profile-metal:focus-visible { outline: 2px solid #222; outline-offset: 5px; border-radius: 22px; }
+.profile-metal-inner { position: relative; min-height: 238px; transition: transform .72s cubic-bezier(.2,.72,.18,1); transform-style: preserve-3d; }
+.profile-metal-inner.is-flipped { transform: rotateY(180deg); }
+.profile-metal-face {
+  position: absolute; inset: 0; display: grid; justify-items: start; align-content: space-between;
+  padding: 20px; border-radius: 22px; overflow: hidden; backface-visibility: hidden; color: #171717;
+  background: linear-gradient(122deg, #7f8488 0%, #e5e7e7 22%, #aeb3b5 46%, #fafafa 58%, #8e9497 77%, #d6d9da 100%);
+  box-shadow: inset 0 1px 0 #fff9, inset 0 -1px 0 #464b4f66, 0 18px 36px -28px #17171788;
+}
+.profile-metal-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(112deg, transparent 25%, #fff8 42%, transparent 59%); mix-blend-mode: screen; }
+.profile-metal-front { align-items: start; }
+.profile-metal-back { transform: rotateY(180deg); align-content: center; justify-items: center; text-align: center; gap: 14px; }
+.profile-metal-kicker { position: relative; z-index: 1; font-size: 13px; color: #4e5153; }
+.profile-metal .avatar-image { position: relative; z-index: 1; width: 86px; height: 86px; margin: 7px auto 0; border-radius: 50%; background: #d6d9da; font-size: 24px; box-shadow: 0 5px 14px #31353855; }
+.profile-metal h1 { position: relative; z-index: 1; margin: auto 0 0; font-size: 30px; line-height: 1; }
+.profile-metal .profile-contact { position: relative; z-index: 1; justify-content: start; color: #4f5254; }
+.profile-metal-back strong, .profile-metal-back span { position: relative; z-index: 1; }
+.profile-metal-back strong { font: 24px 'Martian Mono', monospace; letter-spacing: -.07em; }
+.profile-metal-back > span:not(.profile-metal-kicker):not(.profile-metal-hint) { max-width: 220px; color: #4f5254; font-size: 14px; }
+.profile-metal-hint { position: relative; z-index: 1; justify-self: end; color: #5b5e60; font-size: 11px; }
+.profile-share-phone { display: block; margin: 10px auto 0; }
 .profile-portrait {
   display: grid;
   justify-items: center;

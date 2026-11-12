@@ -215,13 +215,13 @@ export function makeApi(env) {
   async function state(client, actor) {
     if (!actor || actor.pending) return { account: actor, people: [], tasks: [], telegram: Boolean(env.TELEGRAM_BOT_TOKEN) };
     const { rows } = await client.query(`
-      SELECT id, name, profile, access_granted_at, telegram_photo_url, telegram_username FROM accounts WHERE role = 'mentee' AND (id = $1 OR mentor_id = $1) ORDER BY name
+      SELECT id, name, profile, access_granted_at, created_at, telegram_photo_url, telegram_username FROM accounts WHERE role = 'mentee' AND (id = $1 OR mentor_id = $1) ORDER BY name
     `, [actor.id]);
     const ids = rows.map((person) => person.id);
     const [tasks, photos] = await Promise.all([
       client.query(`SELECT id, person, title, day::text AS date, COALESCE(start_day, day)::text AS "startDate",
         COALESCE(end_day, day)::text AS "endDate", to_char(time, 'HH24:MI') AS time,
-        to_char(COALESCE(end_time, time), 'HH24:MI') AS "endTime", movable, done, project_id AS "projectId"
+        to_char(COALESCE(end_time, time), 'HH24:MI') AS "endTime", created_at AS "createdAt", movable, done, project_id AS "projectId"
         FROM tasks WHERE person = ANY($1::uuid[]) ORDER BY day, time`, [ids]),
       client.query(`SELECT id, person, caption, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
         FROM photos WHERE person = ANY($1::uuid[]) ORDER BY created_at DESC`, [ids]),
@@ -229,8 +229,9 @@ export function makeApi(env) {
     return {
       account: actor,
       telegram: Boolean(env.TELEGRAM_BOT_TOKEN),
-      people: rows.map(({ id, name, profile: { skillGrowth, ...profile }, access_granted_at, telegram_photo_url, telegram_username }) => ({
+      people: rows.map(({ id, name, profile: { skillGrowth, ...profile }, access_granted_at, created_at, telegram_photo_url, telegram_username }) => ({
         id, name, pending: !access_granted_at, initials: name.split(/\s+/).slice(0, 2).map((word) => word[0]).join(''),
+        createdAt: created_at,
         ...profile, ...(id === actor.id ? { skillGrowth: skillGrowth ?? [] } : {}), photoUrl: telegram_photo_url, username: telegram_username, soft: profile.soft ?? null, hard: profile.hard ?? [], projects: profile.projects ?? [],
         photos: photos.rows.filter((photo) => photo.person === id).map((photo) => ({ ...photo, url: '/api/photo/' + photo.id })),
       })),
@@ -240,9 +241,20 @@ export function makeApi(env) {
 
   function projectSources(data) {
     const sources = [];
+    const links = Array.isArray(data.links) ? data.links : [];
+    for (const item of links.slice(0, 3)) {
+      if (!item?.name && !item?.url) continue;
+      const type = lowerText(item.name, 70);
+      requireInput(type && typeof item.url === 'string', 'Заполни название и ссылку.');
+      let url;
+      try { url = new URL(item.url); } catch { throw new ApiError(422, 'Проверь ссылку.'); }
+      requireInput(url.protocol === 'https:' && !url.username && !url.password, 'Ссылка должна начинаться с https://.');
+      sources.push({ type, url: url.href });
+    }
+    if (sources.length) return sources;
     for (const [type, raw, domains] of [
-      ['GitHub', data.github, ['github.com', 'www.github.com']],
-      ['Figma', data.figma, ['figma.com', 'www.figma.com']],
+      ['github', data.github, ['github.com', 'www.github.com']],
+      ['figma', data.figma, ['figma.com', 'www.figma.com']],
     ]) {
       if (!raw) continue;
       let url;

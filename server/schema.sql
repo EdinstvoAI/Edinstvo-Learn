@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   telegram_id text UNIQUE,
   mentor_id uuid REFERENCES accounts(id),
   profile jsonb NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now(),
   CHECK ((role = 'mentor') = (mentor_id IS NULL))
 );
 
@@ -15,6 +16,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS access_granted_at timestamptz;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS access_attempts integer NOT NULL DEFAULT 0;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS access_retry_at timestamptz;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS local_id text UNIQUE;
@@ -28,6 +30,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   end_day date,
   time time NOT NULL,
   end_time time,
+  created_at timestamptz NOT NULL DEFAULT now(),
   movable boolean NOT NULL DEFAULT false,
   done boolean NOT NULL DEFAULT false
 );
@@ -38,6 +41,7 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id uuid;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_day date;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_day date;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_time time;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 UPDATE tasks SET start_day = COALESCE(start_day, day), end_day = COALESCE(end_day, day), end_time = COALESCE(end_time, time);
 
 UPDATE accounts AS account

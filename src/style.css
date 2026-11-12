@@ -196,6 +196,7 @@ main { padding-top: 20px; }
 .home-wheel { position: relative; display: grid; align-content: start; min-width: 0; padding: 0; background: white; }
 .home-wheel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .wheel-switch { display: inline-flex; align-items: center; gap: 10px; }
+.wheel-switch-row { justify-content: center; margin-top: 10px; }
 .wheel-switch button {
   display: block; min-height: 48px; padding: 4px 17px; border: 0; border-radius: 100px;
   background: none; color: #747474; font-size: clamp(25px, 4vw, 40px); line-height: 1.03;
@@ -363,6 +364,7 @@ main { width: min(100%, 970px); margin-inline: auto; padding-bottom: 110px; }
 .roster-list button { border: 0; border-radius: 20px; padding: 0 13px; min-height: 44px; background: #f7f7f7; }
 .roster-list button[aria-pressed=true] { background: #eaf2dc; }
 .sources a { background: #f7f7f7; border-radius: 100px; min-height: 44px; display: inline-flex; align-items: center; padding: 0 13px; }
+.project-link-row { display: grid; gap: 8px; padding-block: 8px; }
 .mobile-nav {
   position: fixed; display: block; z-index: 2; left: 50%; right: auto;
   bottom: max(9px, env(safe-area-inset-bottom)); translate: -50% 0;

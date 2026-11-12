@@ -49,6 +49,7 @@ class LearnApp extends LitElement {
     people: { state: true },
     tasks: { state: true },
     date: { state: true },
+    calendarFilter: { state: true },
     selections: { state: true },
     modal: { state: true },
     answers: { state: true },
@@ -65,6 +66,7 @@ class LearnApp extends LitElement {
     motionState: { state: true },
     navMotion: { state: true },
     wheelMotion: { state: true },
+    profileFlipped: { state: true },
   };
 
   constructor() {
@@ -78,6 +80,7 @@ class LearnApp extends LitElement {
     this.people = [];
     this.tasks = [];
     this.date = today();
+    this.calendarFilter = 'today';
     this.selections = {};
     this.modal = null;
     this.answers = [];
@@ -91,6 +94,7 @@ class LearnApp extends LitElement {
     this.activeWheel = 0;
     this.activeSector = -1;
     this.wheelMotion = 0;
+    this.profileFlipped = false;
     this.motionState = typeof globalThis.DeviceOrientationEvent?.requestPermission === 'function' ? 'ask' : 'ready';
     this.orientWheel = (event) => this.onOrientation(event);
     this.onMotionGesture = (event) => {
@@ -244,6 +248,7 @@ class LearnApp extends LitElement {
     this.activeWheel = 0;
     this.activeSector = -1;
     this.neutralOrientation = null;
+    this.profileFlipped = false;
   }
 
   mutate(action, data) {
@@ -469,7 +474,7 @@ class LearnApp extends LitElement {
   }
 
   profile() {
-    const { name, username, phone, photos = [] } = this.person;
+    const { name, username, phone, photos = [], createdAt } = this.person;
     const webApp = window.Telegram?.WebApp;
     const canSharePhone = this.role === 'mentee' && webApp?.initData && webApp.isVersionAtLeast?.('6.9');
     return html`
@@ -478,17 +483,31 @@ class LearnApp extends LitElement {
         <button class="text-button" @click=${() => this.go('calendar')}>Задачи</button>
         <button class="text-button" @click=${() => this.go('projects')}>Проекты</button>
       </div>` : nothing}
-      <header class="profile-portrait">
-        ${this.avatar(this.person)}
-        <h1>${name}</h1>
-        <div class="profile-contact">
-          ${username ? html`<span>@${username}</span>` : nothing}
-          ${phone ? html`<span>${phone}</span>`
-            : canSharePhone ? html`<button class="text-button" ?disabled=${this.formBusy}
-              @click=${() => this.sharePhone(webApp)}>Поделиться номером с ментором</button>` : nothing}
+      <section class="profile-metal" aria-label="Профиль" tabindex="0"
+        @click=${() => { this.profileFlipped = !this.profileFlipped; }}
+        @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.profileFlipped = !this.profileFlipped; } }}>
+        <div class=${'profile-metal-inner' + (this.profileFlipped ? ' is-flipped' : '')}>
+          <div class="profile-metal-face profile-metal-front">
+            <span class="profile-metal-kicker">менторство</span>
+            ${this.avatar(this.person)}
+            <h1>${name}</h1>
+            <div class="profile-contact">
+              ${username ? html`<span>@${username}</span>` : nothing}
+              ${phone ? html`<span>${phone}</span>` : nothing}
+            </div>
+            <span class="profile-metal-hint">нажми, чтобы перевернуть</span>
+          </div>
+          <div class="profile-metal-face profile-metal-back">
+            <span class="profile-metal-kicker">первый вход</span>
+            <strong>${createdAt ? new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(createdAt)) : 'дата пока не записана'}</strong>
+            <span>с этого дня начинается твой путь в единстве</span>
+            <span class="profile-metal-hint">нажми, чтобы вернуться</span>
+          </div>
         </div>
-        ${this.contactError ? html`<p class="form-error" role="alert">${this.contactError}</p>` : nothing}
-      </header>
+      </section>
+      ${canSharePhone && !phone ? html`<button class="text-button profile-share-phone" ?disabled=${this.formBusy}
+        @click=${() => this.sharePhone(webApp)}>поделиться номером с ментором</button>` : nothing}
+      ${this.contactError ? html`<p class="form-error" role="alert">${this.contactError}</p>` : nothing}
       <section class="profile-lower memories" aria-labelledby="memories-title">
         <header class="memories-header">
           <h2 id="memories-title">Воспоминания</h2>
@@ -550,17 +569,6 @@ class LearnApp extends LitElement {
     const group = groups[this.activeWheel] ?? groups[0];
     const growth = this.growth;
     return html`<section class="home-wheel ${group.color}" aria-label="Круги навыков">
-      <div class="home-wheel-top">
-        <edinstvo-glass class="wheel-switch" aria-label="Тип навыков" role="group"
-          frost="0.34" refraction="0.12" rim="0" stroke-thickness="0" transparency="0.97">
-          <div class="wheel-tabs">
-            <button aria-pressed=${this.activeWheel === 0} @click=${() => this.setWheel(0)}>Софты</button>
-            <button aria-pressed=${this.activeWheel > 0} @click=${() => {
-              if (this.activeWheel === 0) this.setWheel(1);
-            }}>Харды</button>
-          </div>
-        </edinstvo-glass>
-      </div>
       ${this.activeWheel > 0 && this.person.hard.length > 1 ? html`<div class="wheel-groups" aria-label="Круги хардов">
         ${groups.slice(1).map((item, index) => html`<button aria-pressed=${this.activeWheel === index + 1}
           @click=${() => this.setWheel(index + 1)}>${item.detail}</button>`)}
@@ -592,6 +600,16 @@ class LearnApp extends LitElement {
                 this.selectSector(index);
               }}><span>${this.activeWheel === 0 ? shortSoftLabels[index] : label}</span></button>`;
           })}
+        </div>
+      </div>
+      <div class="home-wheel-top wheel-switch-row">
+        <div class="wheel-switch" aria-label="Тип навыков" role="group">
+          <div class="wheel-tabs">
+            <button aria-pressed=${this.activeWheel === 0} @click=${() => this.setWheel(0)}>Софты</button>
+            <button aria-pressed=${this.activeWheel > 0} @click=${() => {
+              if (this.activeWheel === 0) this.setWheel(1);
+            }}>Харды</button>
+          </div>
         </div>
       </div>
       ${growth ? html`<button class="text-button growth-skip" @click=${() => this.finishGrowth(true)}>Пропустить анимацию</button>` : nothing}
@@ -761,7 +779,7 @@ class LearnApp extends LitElement {
           <button class="primary" @click=${() => this.go('home')}>Посмотреть навыки</button>`}
       </section>`;
     }
-    const checkpoint = [10, 20].includes(this.answers.length);
+    const checkpoint = [10, 15, 20, 25].includes(this.answers.length);
     return html`<section class="assessment">
       <div class="assessment-progress">
         <strong>${Math.min(this.answers.length + 1, questions.length)} из ${questions.length}</strong>
@@ -772,8 +790,8 @@ class LearnApp extends LitElement {
       </div>
       <progress aria-label="Отвечено вопросов" max=${questions.length} value=${this.answers.length}></progress>
       ${checkpoint ? keyed(remaining, html`<div class="encouragement" role="status"><img src="/mobile-home/star.png" alt="">
-        <p>${remaining === 10 ? 'Ещё чуть-чуть!' : 'Отлично идёшь!'} <strong>Осталось ${remaining} вопросов.</strong></p>
-        <skill-celebration color="ink" compact ?fly=${remaining === 10}></skill-celebration></div>`) : nothing}
+        <p>${remaining <= 5 ? 'Молодец, финальный рывок!' : remaining === 10 ? 'Ещё чуть-чуть!' : 'Отлично идёшь!'} <strong>Осталось ${remaining} вопросов.</strong></p>
+        <skill-celebration color="ink" compact ?fly=${remaining === 10 || remaining === 5} ?confetti=${remaining === 5}></skill-celebration></div>`) : nothing}
       ${question ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${question.answers.map((answer, index) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
       </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
@@ -813,8 +831,14 @@ class LearnApp extends LitElement {
     const now = new Date().toTimeString().slice(0, 5);
     const currentDay = today();
     const upcoming = this.personTasks.find((task) => !task.done
-      && (task.date > currentDay || (task.date === currentDay && task.time >= now)));
+      && ((task.endDate ?? task.date) > currentDay || ((task.startDate ?? task.date) <= currentDay && task.time >= now)));
     const visibleTasks = this.personTasks.filter((task) => this.date >= (task.startDate ?? task.date) && this.date <= (task.endDate ?? task.date)).sort((a, b) => a.time.localeCompare(b.time));
+    const newCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const filteredTasks = this.personTasks.filter((task) => {
+      if (this.calendarFilter === 'today') return this.date >= (task.startDate ?? task.date) && this.date <= (task.endDate ?? task.date);
+      if (this.calendarFilter === 'new') return task.createdAt && Date.parse(task.createdAt) >= newCutoff;
+      return true;
+    }).sort((a, b) => (a.startDate ?? a.date).localeCompare(b.startDate ?? b.date) || a.time.localeCompare(b.time));
     const learner = this.role === 'mentee';
     return html`
       ${learner ? this.learnerTitle('calendar', 'Календарь') : html`<div class="page-title"><div><h1>Календарь</h1><p>${this.person.name}</p></div></div>`}
@@ -850,10 +874,14 @@ class LearnApp extends LitElement {
           <time datetime=${upcoming.date + 'T' + upcoming.time}>${upcoming.date === currentDay ? 'Сегодня' : dayLabel.format(parseDate(upcoming.date))}, ${upcoming.time}</time></span>
         </button>` : html`<p>Ближайших задач пока нет.</p>`}
       </section>
-      <div class="section-line calendar-agenda-title"><h2>${longDate.format(selected)}</h2>
+      <div class="calendar-filters" role="tablist" aria-label="Фильтр задач">
+        ${[['today', 'сегодня'], ['new', 'новые'], ['all', 'все']].map(([value, label]) => html`<button role="tab" aria-selected=${this.calendarFilter === value}
+          @click=${() => { this.calendarFilter = value; }}>${label}</button>`)}
+      </div>
+      <div class="section-line calendar-agenda-title"><h2>${this.calendarFilter === 'today' ? longDate.format(selected) : this.calendarFilter === 'new' ? 'добавлено недавно' : 'все задачи'}</h2>
         ${this.personId ? html`<button class="primary" @click=${() => this.open({ type: 'create' })}>+ Задача</button>` : nothing}</div>
-      ${visibleTasks.length
-        ? html`<section class="agenda">${visibleTasks.map((task) => this.calendarTask(task))}</section>`
+      ${filteredTasks.length
+        ? html`<section class="agenda">${filteredTasks.map((task) => this.calendarTask(task))}</section>`
         : html`<p class="agenda-empty">На этот день задач нет.</p>`}
       </div>`;
   }
@@ -1016,8 +1044,10 @@ class LearnApp extends LitElement {
               <label>Название<input name="name" required maxlength="80" placeholder="Название проекта"></label>
               <label>Описание<textarea name="description" maxlength="160" rows="2" placeholder="Что ты хочешь сделать?"></textarea></label>
               <details class="project-links"><summary>Добавить ссылки</summary>
-                <label>GitHub<input name="github" type="url" maxlength="400"></label>
-                <label>Figma<input name="figma" type="url" maxlength="400"></label>
+                ${[1, 2, 3].map((index) => html`<div class="project-link-row">
+                  <label>название ссылки ${index}<input name=${'linkName' + index} maxlength="70" placeholder="например, репозиторий"></label>
+                  <label>ссылка ${index}<input name=${'linkUrl' + index} type="url" maxlength="400" placeholder="https://"></label>
+                </div>`)}
               </details>
             </fieldset>
             <fieldset class="project-step" ?hidden=${step !== 2}>
@@ -1097,7 +1127,9 @@ class LearnApp extends LitElement {
         if (reached) this.celebration = { person: this.personId, key };
       } else if (type === 'new-project') {
         await this.mutate('project', {
-          name: value('name'), description: value('description'), folder: value('folder'), github: value('github'), figma: value('figma'),
+          name: value('name'), description: value('description'), folder: value('folder'), links: [1, 2, 3].map((index) => ({
+            name: value('linkName' + index), url: value('linkUrl' + index),
+          })),
         });
       } else if (type === 'link-existing') {
         await this.mutate('link-task', { id: value('taskId'), projectId: project.id });

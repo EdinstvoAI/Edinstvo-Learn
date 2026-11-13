@@ -863,3 +863,27 @@ learn-app .skill-readout strong { font: 600 20px 'Martian Mono', monospace; }
 @keyframes float-note { 0% { opacity: 0; transform: translate(-50%, 16px); } 15%, 75% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -12px); } }
 .assessment-motion { position: relative; height: 120px; margin-bottom: 8px; }
 .assessment-motion skill-celebration { position: absolute; inset: -30px 50% -30px auto; width: 180px; transform: translateX(50%); }
+
+/* 2026-11-13, задачи #12–#16: каркас Mini App. Страница не прокручивается и не масштабируется, листается только контент,
+   шапка с именем закреплена, док поверх контента без белой подложки. */
+html:has(.student-shell), html:has(.student-shell) body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+learn-app { touch-action: pan-x pan-y; }
+.student-shell { height: var(--tg-viewport-stable-height, 100dvh); display: block; position: relative; overflow: hidden; }
+.student-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+.student-shell .student-dock, .student-shell[data-page] .student-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; background: transparent;
+  padding: 0 14px max(12px, var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom)); }
+.student-shell .home-person { position: sticky; top: 0; z-index: 10; min-height: 0; padding: 14px 0 10px; background: #fff; }
+.student-shell .home-person span { font-size: 10px; }
+.student-shell .home-person :is(h1, p) { font-size: 17px; font-weight: 500; }
+/* Сводка на подложке, аватар на линии текста. */
+.student-shell .student-home .home-summary { margin: 0 6px 8px; padding: 18px 18px 20px; border-radius: 30px; background: #f6f6f6; }
+learn-app .summary-avatar { display: inline-block; vertical-align: middle; }
+learn-app .summary-avatar .avatar-image { display: inline-grid; width: 26px; height: 26px; vertical-align: top; margin-top: -2px; }
+/* Карточка как металл: щётка, мягкий градиент и блик, который едет при повороте. */
+.card-face { background:
+  linear-gradient(calc(110deg + var(--shine, 0deg)), transparent 28%, #ffffff47 44%, #ffffff12 52%, transparent 66%),
+  repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 3px),
+  linear-gradient(160deg, #f26a4b, #e24c31 45%, #c93a22 100%); }
+.card-face::after { display: none; }
+.card-slice { background: linear-gradient(#d24a30, #9e2e1a); }
+.photo-preview { width: 100%; max-height: 50vh; object-fit: cover; border-radius: 18px; }

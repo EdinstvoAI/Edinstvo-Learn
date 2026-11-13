@@ -7,7 +7,6 @@ import './skill-chart.js';
 import './skill-growth.js';
 import './celebration.js';
 import './assessment-scene.js';
-import './home-backdrop.js';
 import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
@@ -194,6 +193,9 @@ class LearnApp extends LitElement {
       }
       const webApp = window.Telegram?.WebApp;
       if (state.telegram && webApp?.initData) {
+        // Mini App на всю высоту, свайп вниз внутри приложения не сворачивает окно Telegram.
+        webApp.expand?.();
+        if (webApp.isVersionAtLeast?.('7.7')) webApp.disableVerticalSwipes();
         this.useTelegramOrientation();
         if (!this.resumeWebApp && webApp.isVersionAtLeast?.('8.0')) {
           this.resumeWebApp = webApp;
@@ -221,19 +223,12 @@ class LearnApp extends LitElement {
     }
   }
 
-  // Повтор анимации роста для выбранного сектора. Это не событие с сервера, поэтому отметка о просмотре не отправляется.
-  replayGrowth(level) {
-    const index = this.activeSector;
-    this.activeSector = -1;
-    this.growth = { id: 'replay-' + Date.now(), key: this.activeWheel === 0 ? 'soft' : this.activeWheel - 1, index, from: 0, to: level, replay: true };
-  }
-
   finishGrowth(seen) {
     const growth = this.growth;
     if (!growth) return;
     this.playedGrowth.add(growth.id);
     this.growth = null;
-    if (seen && !growth.replay) void this.mutate('growth-seen', { id: growth.id }).catch(() => {});
+    if (seen) void this.mutate('growth-seen', { id: growth.id }).catch(() => {});
   }
 
   applyState(state) {
@@ -324,6 +319,8 @@ class LearnApp extends LitElement {
     inner.classList.toggle('is-dragging', dragging);
     inner.style.setProperty('--turn-y', rotateY + 'deg');
     inner.style.setProperty('--turn-x', rotateX + 'deg');
+    // Блик металла смещается вместе с поворотом.
+    inner.style.setProperty('--shine', ((rotateY % 360) + rotateX) * .6 + 'deg');
   }
 
   cardDown(event) {
@@ -388,6 +385,19 @@ class LearnApp extends LitElement {
     } finally {
       field.disabled = false;
     }
+  }
+
+  // Добавление воспоминания: сначала системный выбор фото, затем окно с превью, описанием и отправкой.
+  pickPhoto(event) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(file.type) || file.size > 10 * 1024 * 1024 || !file.size) {
+      this.photoError = 'Выбери фото PNG, JPEG, WebP, GIF или AVIF размером до 10 МБ.';
+      return;
+    }
+    this.photoError = '';
+    void this.open({ type: 'photo', file, preview: URL.createObjectURL(file) });
   }
 
   async loadCode() {
@@ -532,15 +542,18 @@ class LearnApp extends LitElement {
     </main>`;
     return html`
       ${learner ? html`<div class="student-shell" data-page=${this.page} ?data-rise=${this.riseFromSkills}>
-        ${['home', 'calendar', 'projects'].includes(this.page) ? html`<home-backdrop aria-hidden="true"></home-backdrop>` : nothing}
         <div class="student-scroll" @scroll=${this.onPageScroll}>${content}</div>
         ${showDock ? html`<footer class="student-dock">${this.nav()}</footer>` : nothing}
       </div>` : content}
+      ${this.page === 'assessment' && this.assessmentPause ? keyed(this.assessmentPause, html`<p class="encouragement-float" role="status">
+        ${{ 9: 'молодец, отлично идёшь!', 20: 'две трети позади, так держать!' }[this.assessmentPause] ?? 'финальный рывок!'}</p>
+        <assessment-scene class="assessment-burst" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}
+          @scene-end=${() => { this.assessmentPause = 0; }}></assessment-scene>`) : nothing}
       ${this.finale ? html`<assessment-scene class="assessment-finale" kind="finale"
         @scene-cover=${() => { this.assessmentStatus = 'done'; }} @scene-end=${() => { this.finale = false; }}></assessment-scene>` : nothing}
       <dialog aria-labelledby="dialog-title" @cancel=${(event) => {
         if (this.formBusy) event.preventDefault();
-      }} @close=${() => { this.modal = null; }}>${this.modal ? this.modalContent() : nothing}</dialog>`;
+      }} @close=${() => { if (this.modal?.preview) URL.revokeObjectURL(this.modal.preview); this.modal = null; }}>${this.modal ? this.modalContent() : nothing}</dialog>`;
   }
 
   avatar(person) {
@@ -646,7 +659,9 @@ class LearnApp extends LitElement {
           <p>делись своей работой с ментором</p>
         </header>
         <div class="photo-grid">
-          ${this.role === 'mentee' ? html`<button class="memories-add" @click=${() => this.open({ type: 'photo' })}><span aria-hidden="true">+</span>добавить фото</button>` : nothing}
+          ${this.role === 'mentee' ? html`<input class="memories-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden
+            @change=${(event) => this.pickPhoto(event)}>
+          <button class="memories-add" @click=${() => this.querySelector('.memories-file').click()}><span aria-hidden="true">+</span>добавить фото</button>` : nothing}
           ${photos.map((photo) => html`<figure>
             <img src=${photo.url} alt=${photo.caption || 'Фото рабочего процесса'} loading="lazy">
             <figcaption>
@@ -752,7 +767,6 @@ class LearnApp extends LitElement {
       ${this.activeSector >= 0 ? keyed(this.activeSector, html`<div class="skill-readout" role="status">
         <span>${group.labels[this.activeSector]}</span>
         <strong>${group.levels[this.activeSector] === null ? 'Нет оценки' : group.levels[this.activeSector] + '%'}</strong>
-        ${group.levels[this.activeSector] ? html`<button class="growth-replay" @click=${() => this.replayGrowth(group.levels[this.activeSector])}>показать рост навыка</button>` : nothing}
         <skill-celebration class="skill-reveal" color=${group.color} compact></skill-celebration>
       </div>`) : nothing}
     </section>`;
@@ -822,9 +836,14 @@ class LearnApp extends LitElement {
   }
 
   onOrientation(event) {
-    if (this.motionState !== 'ready' || this.page !== 'home' || event.beta === null || event.gamma === null) return;
+    if (this.motionState !== 'ready' || !['home', 'profile'].includes(this.page) || event.beta === null || event.gamma === null) return;
     const neutral = this.neutralOrientation ??= { beta: event.beta, gamma: event.gamma, alpha: event.alpha };
     const limit = (angle, max) => Math.max(-max, Math.min(max, angle));
+    if (this.page === 'profile') {
+      // Карточка профиля поворачивается за наклоном телефона, пока её не тянут пальцем.
+      if (!this.cardDrag) this.turnCard((this.cardTurn ?? 0) + limit((event.gamma - neutral.gamma) * 1.1, 32), limit(-(event.beta - neutral.beta) * .8, 24), true);
+      return;
+    }
     const heading = event.alpha === null || neutral.alpha === null ? 0 : ((event.alpha - neutral.alpha + 540) % 360) - 180;
     this.tilt(limit((event.beta - neutral.beta) * 0.88, 27),
       limit((event.gamma - neutral.gamma) * 0.94, 28), limit(heading * 0.25, 20));
@@ -928,10 +947,6 @@ class LearnApp extends LitElement {
       <div class="assessment-segments" aria-label=${`Отвечено вопросов: ${this.answers.length} из ${questions.length}`}>
         ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
       </div>
-      ${this.assessmentPause ? keyed(this.assessmentPause, html`<p class="encouragement-float" role="status">
-        ${{ 9: 'молодец, отлично идёшь!', 20: 'две трети позади, так держать!' }[this.assessmentPause] ?? 'финальный рывок!'}</p>
-        <assessment-scene class="assessment-burst" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}
-          @scene-end=${() => { this.assessmentPause = 0; }}></assessment-scene>`) : nothing}
       ${question ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
       </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
@@ -1146,7 +1161,7 @@ class LearnApp extends LitElement {
     const { type, task, project, key, index, label, step } = this.modal;
     const title = {
       hard: 'Новый круг хардов', title: 'Роль на карточке', create: 'Новая задача', move: 'Перенести задачу',
-      photo: 'Добавить фото',
+      photo: 'Новое воспоминание',
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
     }[type];
     return html`
@@ -1183,8 +1198,8 @@ class LearnApp extends LitElement {
               ${this.linkableTasks().map((item) => html`<option value=${item.id}>${item.title}, ${dayLabel.format(parseDate(item.date))}</option>`)}
             </select></label>`
           : type === 'photo' ? html`
-            <label>Фото процесса<input name="photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" required></label>
-            <label>Подпись<input name="caption" maxlength="120" placeholder="Над чем работаешь?"></label>`
+            ${this.modal.preview ? html`<img class="photo-preview" src=${this.modal.preview} alt="">` : nothing}
+            <label>Описание<input name="caption" maxlength="120" placeholder="над чем работаешь?"></label>`
           : html`
             ${type === 'create' ? html`<label>Задача<input name="title" required maxlength="100"></label>` : html`<p>${task.title}</p>`}
             <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.date}></label>
@@ -1198,7 +1213,7 @@ class LearnApp extends LitElement {
             </select></label>` : nothing}
             ${type === 'create' && this.role === 'mentor' ? html`<label class="check"><input type="checkbox" name="movable"> Менти может перенести задачу</label>` : nothing}`}
           ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
-          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : 'Сохранить'}</button>
+          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : 'Сохранить'}</button>
         </form>`;
   }
 
@@ -1227,7 +1242,7 @@ class LearnApp extends LitElement {
       } else if (type === 'hard') {
         await this.mutate('hard', { name: value('name'), skills: value('skills').split(',') });
       } else if (type === 'photo') {
-        const file = data.get('photo');
+        const file = this.modal.file;
         if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(file.type) || file.size > 10 * 1024 * 1024 || !file.size) {
           throw new Error('Выбери фото PNG, JPEG, WebP, GIF или AVIF размером до 10 МБ.');
         }

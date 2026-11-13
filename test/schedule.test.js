@@ -84,3 +84,11 @@ test('assessment pauses stay inside the test', () => {
   assert.deepEqual(assessmentPauses, [9, 20, 25]);
   assert.ok(assessmentPauses.every((count) => count > 0 && count < questions.length));
 });
+
+test('fitSize shrinks the long side to the limit and keeps proportions', async () => {
+  const { fitSize } = await import('../src/api.js');
+  assert.deepEqual(fitSize(4032, 3024), [1600, 1200]);
+  assert.deepEqual(fitSize(3024, 4032), [1200, 1600]);
+  assert.deepEqual(fitSize(800, 600), [800, 600]);
+  assert.deepEqual(fitSize(10000, 10), [1600, 2]);
+});

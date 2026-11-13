@@ -781,8 +781,8 @@ learn-app .assessment .encouragement .avatar-image img { position: absolute; ins
 .assessment-burst { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
 
 /* Карточка профиля: оранжевая, с настоящей толщиной из слоёв, вращается как 3D-объект. */
-.profile-card { width: min(100%, 380px); aspect-ratio: 1.53; margin: 18px auto 0; perspective: 1100px; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
-.profile-card:focus-visible { outline: 2px solid #222; outline-offset: 6px; border-radius: 34px; }
+.profile-card3d { width: min(100%, 380px); aspect-ratio: 1.53; margin: 18px auto 0; perspective: 1100px; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.profile-card3d:focus { outline: none; }
 .profile-card-3d { position: relative; height: 100%; transform-style: preserve-3d;
   transform: rotateX(var(--turn-x, 0deg)) rotateY(var(--turn-y, 0deg)); transition: transform .7s cubic-bezier(.2,.75,.2,1); }
 .profile-card-3d.is-dragging { transition: none; cursor: grabbing; }
@@ -833,3 +833,27 @@ learn-app .memories { padding: 22px 16px; border-radius: 34px; background: #f8f8
 .skill-percent { display: inline-flex; align-items: center; gap: 2px; flex: none; font: 14px 'Martian Mono', monospace; }
 .skill-percent input { width: 58px; min-height: 36px; padding: 0 6px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font: inherit; text-align: right; }
 .skill-percent input:focus-visible { outline: 2px solid #e44d32; outline-offset: 1px; }
+
+/* 2026-11-13: правки Макара по телефону. */
+.memories-add:focus, .memories-add:focus-visible { outline: none; }
+.memories-add:active, learn-app button:active:not(:disabled) { transform: scale(.97); }
+learn-app button { transition: transform .16s ease, background-color .2s ease, color .2s ease; }
+/* Воспоминания: серый лист идёт до низа экрана, нижние скругления не видны. */
+learn-app .memories { min-height: calc(100dvh - 120px); margin-bottom: -140px; padding-bottom: 160px; border-radius: 34px 34px 0 0; }
+learn-app .memories-header { width: 100%; justify-content: center; }
+learn-app .memories-header h2, learn-app .memories-header p { width: 100%; text-align: center; }
+/* Заголовки разделов текстом: Martian, вытянутый по вертикали, как месяц в календаре. */
+.stretch-title { margin: 0; font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -.05em; transform: scale(.82, 1.5); }
+.learner-section-title.stretch-title, .home-asset-heading.stretch-title { display: block; text-align: center; padding: 18px 0 30px; transform-origin: center top; }
+.cal-month.stretch-title { margin-bottom: 22px; transform-origin: left top; }
+/* Выбранный навык: карточка с названием и процентом, кнопка повтора роста. */
+learn-app .skill-readout { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px 12px; margin: 12px 4px 0; padding: 16px 18px; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px #0000000d; }
+learn-app .skill-readout span { font-size: 18px; }
+learn-app .skill-readout strong { font: 600 20px 'Martian Mono', monospace; }
+.growth-replay { grid-column: 1 / -1; justify-self: center; min-height: 44px; padding: 0 22px; border: 0; border-radius: 14px; background: #1f2630; color: #fff; font: inherit; cursor: pointer; }
+/* Плавный вход экранов. */
+@media (prefers-reduced-motion: no-preference) {
+  learn-app .screen > * { animation: screen-in .32s cubic-bezier(.2,.7,.2,1) both; }
+  learn-app .skill-readout { animation: screen-in .24s ease-out both; }
+}
+@keyframes screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

@@ -221,12 +221,19 @@ class LearnApp extends LitElement {
     }
   }
 
+  // Повтор анимации роста для выбранного сектора. Это не событие с сервера, поэтому отметка о просмотре не отправляется.
+  replayGrowth(level) {
+    const index = this.activeSector;
+    this.activeSector = -1;
+    this.growth = { id: 'replay-' + Date.now(), key: this.activeWheel === 0 ? 'soft' : this.activeWheel - 1, index, from: 0, to: level, replay: true };
+  }
+
   finishGrowth(seen) {
     const growth = this.growth;
     if (!growth) return;
     this.playedGrowth.add(growth.id);
     this.growth = null;
-    if (seen) void this.mutate('growth-seen', { id: growth.id }).catch(() => {});
+    if (seen && !growth.replay) void this.mutate('growth-seen', { id: growth.id }).catch(() => {});
   }
 
   applyState(state) {
@@ -330,14 +337,16 @@ class LearnApp extends LitElement {
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
     drag.moved ||= Math.hypot(dx, dy) > 6;
-    if (drag.moved) this.turnCard(drag.base + dx * .6, Math.max(-35, Math.min(35, -dy * .35)), true);
+    drag.current = drag.base + dx * .6;
+    if (drag.moved) this.turnCard(drag.current, Math.max(-35, Math.min(35, -dy * .35)), true);
   }
 
   cardUp(event) {
     const drag = this.cardDrag;
     if (!drag) return;
     this.cardDrag = null;
-    const current = drag.base + (event.clientX - drag.x) * .6;
+    // pointercancel приходит без координат, поэтому берём последний угол из движения.
+    const current = drag.current ?? drag.base;
     this.cardTurn = drag.moved ? Math.round(current / 180) * 180 : drag.base + 180;
     this.turnCard(this.cardTurn, 0, false);
   }
@@ -589,7 +598,7 @@ class LearnApp extends LitElement {
         </section>
         <div class="home-inner-sheet">
           <section class="helper-panel">
-            <h2 class="home-asset-heading"><img src="/mobile-home/skills-title.svg" alt="Скиллы"></h2>
+            <h2 class="home-asset-heading stretch-title">скиллы</h2>
             <div class="home-chart-slot">${this.wheelCarousel()}</div>
           </section>
         </div>
@@ -606,7 +615,7 @@ class LearnApp extends LitElement {
         <button class="text-button" @click=${() => this.go('calendar')}>Задачи</button>
         <button class="text-button" @click=${() => this.go('projects')}>Проекты</button>
       </div>` : nothing}
-      <section class="profile-card" aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
+      <section class="profile-card3d" aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
         @pointerdown=${(event) => this.cardDown(event)} @pointermove=${(event) => this.cardMove(event)}
         @pointerup=${(event) => this.cardUp(event)} @pointercancel=${(event) => this.cardUp(event)}
         @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
@@ -743,6 +752,7 @@ class LearnApp extends LitElement {
       ${this.activeSector >= 0 ? keyed(this.activeSector, html`<div class="skill-readout" role="status">
         <span>${group.labels[this.activeSector]}</span>
         <strong>${group.levels[this.activeSector] === null ? 'Нет оценки' : group.levels[this.activeSector] + '%'}</strong>
+        ${group.levels[this.activeSector] ? html`<button class="growth-replay" @click=${() => this.replayGrowth(group.levels[this.activeSector])}>показать рост навыка</button>` : nothing}
         <skill-celebration class="skill-reveal" color=${group.color} compact></skill-celebration>
       </div>`) : nothing}
     </section>`;
@@ -897,10 +907,6 @@ class LearnApp extends LitElement {
     const question = questions[this.answers.length];
     if (status === 'intro' || status === 'done') {
       return html`<section class="assessment assessment-cover">
-        <div class="assessment-emblem">
-          ${this.avatar(this.person)}
-          <skill-celebration color="ink" ?orbit=${status === 'intro'} ?confetti=${status === 'done'}></skill-celebration>
-        </div>
         <h1>${status === 'intro' ? 'Начнём с софтов?' : 'Готово, молодец!'}</h1>
         ${status === 'intro' ? html`<p>30 ситуаций, примерно 10–15 минут. Выбирай вариант, который ближе к тому, как ты обычно поступаешь.</p>
           <button class="primary" @click=${() => { this.assessmentStatus = 'questions'; }}>Начать</button>`
@@ -922,7 +928,7 @@ class LearnApp extends LitElement {
       </div>
       ${checkpoint ? keyed(this.assessmentPause, html`<div class="encouragement" role="status">${this.avatar(this.person)}
         <p>${{ 9: 'Молодец, отлично идёшь!', 20: 'Две трети позади, так держать!' }[this.assessmentPause] ?? 'Молодец, финальный рывок!'}</p></div>
-        <assessment-scene class="assessment-burst" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}></assessment-scene>`) : nothing}
+        <assessment-scene class="assessment-burst" kind="cheer"></assessment-scene>`) : nothing}
       ${question && !this.assessmentPause ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
       </div></div>`) : checkpoint ? nothing : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
@@ -978,7 +984,7 @@ class LearnApp extends LitElement {
             this.weekTouch = undefined;
             if (Math.abs(distance) > 44) this.moveWeek(distance < 0 ? 7 : -7);
           }}>
-          <h2 class="cal-month">${monthName.format(selected)}</h2>
+          <h2 class="cal-month stretch-title">${monthName.format(selected)}</h2>
           <div class="cal-week" aria-label="Дни недели">${weekDays.map((day, index) => {
             const key = shiftDate(this.date, index - offset);
             const date = parseDate(key);
@@ -1031,7 +1037,7 @@ class LearnApp extends LitElement {
 
   learnerTitle(kind, title) {
     return html`<header class="home-person"><span>менти</span><p>${this.account.name.split(/\s+/)[0]}</p></header>
-      <h1 class="learner-section-title"><img src=${'/mobile-home/' + kind + '-title.svg'} alt=${title}></h1>`;
+      <h1 class="learner-section-title stretch-title">${title.toLowerCase()}</h1>`;
   }
 
   projects() {

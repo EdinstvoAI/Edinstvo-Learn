@@ -786,7 +786,7 @@ learn-app .assessment .encouragement .avatar-image img { position: absolute; ins
 .profile-card-3d { position: relative; height: 100%; transform-style: preserve-3d;
   transform: rotateX(var(--turn-x, 0deg)) rotateY(var(--turn-y, 0deg)); transition: transform .7s cubic-bezier(.2,.75,.2,1); }
 .profile-card-3d.is-dragging { transition: none; cursor: grabbing; }
-.card-slice { position: absolute; inset: 0; border-radius: 34px; background: #b8361f; transform: translateZ(calc((var(--slice) - 5.5) * 1px)); }
+.card-slice { position: absolute; inset: 0; border-radius: 34px; background: #b8361f; transform: translateZ(calc((var(--slice) - 2.5) * 2px)); }
 .card-face { position: absolute; inset: 0; display: grid; align-content: start; gap: 2px; padding: 26px 24px; border-radius: 34px; color: #fff;
   background: linear-gradient(135deg, #ee5a3d, #e34b31 55%, #d8432a); backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
 .card-front { transform: translateZ(6.5px); }
@@ -880,10 +880,24 @@ learn-app { touch-action: pan-x pan-y; }
 learn-app .summary-avatar { display: inline-block; vertical-align: middle; }
 learn-app .summary-avatar .avatar-image { display: inline-grid; width: 26px; height: 26px; vertical-align: top; margin-top: -2px; }
 /* Карточка как металл: щётка, мягкий градиент и блик, который едет при повороте. */
-.card-face { background:
-  linear-gradient(calc(110deg + var(--shine, 0deg)), transparent 28%, #ffffff47 44%, #ffffff12 52%, transparent 66%),
-  repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 3px),
-  linear-gradient(160deg, #f26a4b, #e24c31 45%, #c93a22 100%); }
-.card-face::after { display: none; }
+.card-face { background: repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 3px), linear-gradient(160deg, #f26a4b, #e24c31 45%, #c93a22 100%); }
+/* Блик — отдельный слой, который только сдвигается: без перерисовки градиентов на каждом кадре. */
+.card-face::after { display: block; inset: -40% -60%; background: linear-gradient(110deg, transparent 38%, #ffffff47 48%, #ffffff12 53%, transparent 62%);
+  transform: translateX(calc(var(--shine, 0) * 1%)); will-change: transform; }
+.profile-card-3d { will-change: transform; }
 .card-slice { background: linear-gradient(#d24a30, #9e2e1a); }
 .photo-preview { width: 100%; max-height: 50vh; object-fit: cover; border-radius: 18px; }
+
+/* 2026-11-13, правки с телефона. */
+/* Растяжка через scale, а не transform: анимация появления экрана меняет transform и затирала её. */
+.stretch-title, learn-app .student-shell .stretch-title { transform: none; scale: .82 1.5; }
+/* Шапка с именем: белый сверху, прозрачный снизу, контент под ней размывается. */
+.student-shell .home-person { padding-bottom: 26px; margin-bottom: -16px; background: linear-gradient(#fff 45%, #ffffffb0 70%, #fff0);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+/* Проекты: цельная серая панель от шапки до низа вместе с заголовком. */
+.student-shell[data-page=projects] .screen::before { inset: 52px 0 0; background: #f6f6f6; border-radius: 34px 34px 0 0; }
+/* Скиллы: 30 px от краёв листа до заголовка и от заголовка до графика, без белой подложки под графиком. */
+.student-shell .home-inner-sheet { padding: 30px 10px 24px; background: #f6f6f6; }
+.student-shell .home-asset-heading.stretch-title { padding: 0; margin: 0 0 30px; line-height: 1; height: 40px; }
+.student-shell .student-home .home-chart-slot, .student-shell .student-home .home-inner-sheet .helper-panel { background: transparent; box-shadow: none; padding-top: 0; }

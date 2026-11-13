@@ -10,7 +10,7 @@ import './assessment-scene.js';
 import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
-import { encodePhoto, request, telegramData } from './api.js';
+import { compressPhoto, encodePhoto, request, telegramData } from './api.js';
 import { assessmentPauses, filterTasks, formatDate, parseDate, shiftDate, shuffledAnswers, taskOnDay, tasksByWeek } from './schedule.js';
 import './style.css';
 import './student-home.css';
@@ -320,7 +320,7 @@ class LearnApp extends LitElement {
     inner.style.setProperty('--turn-y', rotateY + 'deg');
     inner.style.setProperty('--turn-x', rotateX + 'deg');
     // Блик металла смещается вместе с поворотом.
-    inner.style.setProperty('--shine', ((rotateY % 360) + rotateX) * .6 + 'deg');
+    inner.style.setProperty('--shine', Math.max(-60, Math.min(60, ((rotateY % 360) + rotateX) * .5)));
   }
 
   cardDown(event) {
@@ -392,8 +392,8 @@ class LearnApp extends LitElement {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(file.type) || file.size > 10 * 1024 * 1024 || !file.size) {
-      this.photoError = 'Выбери фото PNG, JPEG, WebP, GIF или AVIF размером до 10 МБ.';
+    if (!file.size || (file.type && !file.type.startsWith('image/'))) {
+      this.photoError = 'Выбери фото.';
       return;
     }
     this.photoError = '';
@@ -633,7 +633,7 @@ class LearnApp extends LitElement {
         @pointerup=${(event) => this.cardUp(event)} @pointercancel=${(event) => this.cardUp(event)}
         @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
         <div class="profile-card-3d" style=${'--turn-y:' + (this.cardTurn ?? 0) + 'deg'}>
-          ${Array.from({ length: 12 }, (_, index) => html`<span class="card-slice" style=${'--slice:' + index} aria-hidden="true"></span>`)}
+          ${Array.from({ length: 6 }, (_, index) => html`<span class="card-slice" style=${'--slice:' + index} aria-hidden="true"></span>`)}
           <div class="card-face card-front">
             <span class="card-role">${this.person.title || 'менти'}</span>
             <h1>${name}</h1>
@@ -659,7 +659,7 @@ class LearnApp extends LitElement {
           <p>делись своей работой с ментором</p>
         </header>
         <div class="photo-grid">
-          ${this.role === 'mentee' ? html`<input class="memories-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden
+          ${this.role === 'mentee' ? html`<input class="memories-file" type="file" accept="image/*" hidden
             @change=${(event) => this.pickPhoto(event)}>
           <button class="memories-add" @click=${() => this.querySelector('.memories-file').click()}><span aria-hidden="true">+</span>добавить фото</button>` : nothing}
           ${photos.map((photo) => html`<figure>
@@ -841,7 +841,12 @@ class LearnApp extends LitElement {
     const limit = (angle, max) => Math.max(-max, Math.min(max, angle));
     if (this.page === 'profile') {
       // Карточка профиля поворачивается за наклоном телефона, пока её не тянут пальцем.
-      if (!this.cardDrag) this.turnCard((this.cardTurn ?? 0) + limit((event.gamma - neutral.gamma) * 1.1, 32), limit(-(event.beta - neutral.beta) * .8, 24), true);
+      // Датчик шлёт события чаще кадров: применяем только последнее значение раз в кадр.
+      this.cardTilt = [limit((event.gamma - neutral.gamma) * 1.1, 32), limit(-(event.beta - neutral.beta) * .8, 24)];
+      this.cardFrame ||= requestAnimationFrame(() => {
+        this.cardFrame = 0;
+        if (!this.cardDrag && this.page === 'profile') this.turnCard((this.cardTurn ?? 0) + this.cardTilt[0], this.cardTilt[1], true);
+      });
       return;
     }
     const heading = event.alpha === null || neutral.alpha === null ? 0 : ((event.alpha - neutral.alpha + 540) % 360) - 180;
@@ -1242,11 +1247,8 @@ class LearnApp extends LitElement {
       } else if (type === 'hard') {
         await this.mutate('hard', { name: value('name'), skills: value('skills').split(',') });
       } else if (type === 'photo') {
-        const file = this.modal.file;
-        if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(file.type) || file.size > 10 * 1024 * 1024 || !file.size) {
-          throw new Error('Выбери фото PNG, JPEG, WebP, GIF или AVIF размером до 10 МБ.');
-        }
-        await this.mutate('photo', { mime: file.type, contents: await encodePhoto(file), caption: value('caption') });
+        const photo = await compressPhoto(this.modal.file);
+        await this.mutate('photo', { mime: 'image/jpeg', contents: await encodePhoto(photo), caption: value('caption') });
         this.photoError = '';
       } else if (type === 'new-project') {
         await this.mutate('project', {

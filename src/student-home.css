@@ -857,3 +857,9 @@ learn-app .skill-readout strong { font: 600 20px 'Martian Mono', monospace; }
   learn-app .skill-readout { animation: screen-in .24s ease-out both; }
 }
 @keyframes screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* Рубеж теста без отдельного экрана: подпись всплывает над вопросом и уходит вместе со сценой. */
+.encouragement-float { position: fixed; left: 50%; top: 18%; z-index: 41; margin: 0; padding: 12px 20px; border-radius: 999px; background: #1c1c1c; color: #fff; font-size: 16px; white-space: nowrap; pointer-events: none;
+  transform: translateX(-50%); animation: float-note 2.6s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes float-note { 0% { opacity: 0; transform: translate(-50%, 16px); } 15%, 75% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -12px); } }
+.assessment-motion { position: relative; height: 120px; margin-bottom: 8px; }
+.assessment-motion skill-celebration { position: absolute; inset: -30px 50% -30px auto; width: 180px; transform: translateX(50%); }

@@ -1,14 +1,14 @@
 import { LitElement, css, html } from 'lit';
-import { objectCover, objectScene, objectSegment } from './object-scene.js';
+import { burstScene, finaleCover, finaleScene } from './lottie-scenes.js';
 
-let asset;
+let library;
 
-// kind: cheer — пролёт объектов на рубеже теста, finale — крупный пролёт, под которым экран переходит к результату.
+// kind: cheer — влёт на рубеже теста, strong — усиленный после 20-го вопроса, finale — переход к результату.
 // При уменьшенном движении сцена не играет, а события cover и end приходят сразу.
 class AssessmentScene extends LitElement {
   static properties = { kind: { type: String } };
   static styles = css`
-    :host { display: block; pointer-events: none; overflow: hidden; }
+    :host { display: block; pointer-events: none; }
     div { width: 100%; height: 100%; }
   `;
 
@@ -19,23 +19,27 @@ class AssessmentScene extends LitElement {
   }
 
   async firstUpdated() {
+    const finale = this.kind === 'finale';
     try {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) throw new Error('reduced motion');
-      asset ??= fetch('/motion/skill-growth.json').then((response) => {
-        if (!response.ok) throw new Error('Animation unavailable');
-        return response.json();
-      }).catch((error) => { asset = undefined; throw error; });
-      const [{ default: lottie }, data] = await Promise.all([import('lottie-web/build/player/lottie_light_canvas.js'), asset]);
+      if (finale) {
+        library ??= fetch('/motion/assessment-objects.json').then((response) => {
+          if (!response.ok) throw new Error('Animation unavailable');
+          return response.json();
+        }).catch((error) => { library = undefined; throw error; });
+      }
+      const [{ default: lottie }, objects] = await Promise.all([
+        import('lottie-web/build/player/lottie_light_canvas.js'), finale ? library : null,
+      ]);
       if (!this.isConnected) return;
       this.animation = lottie.loadAnimation({
         container: this.renderRoot.querySelector('div'), renderer: 'canvas', loop: false, autoplay: false,
-        animationData: objectScene(data),
-        // Финал заполняет экран по высоте: объекты крупные и пролетают через весь экран.
-        rendererSettings: { preserveAspectRatio: this.kind === 'finale' ? 'xMidYMid slice' : 'xMidYMid meet' },
+        animationData: finale ? finaleScene(objects) : burstScene(this.kind === 'strong'),
+        rendererSettings: { preserveAspectRatio: 'xMidYMid slice' },
       });
       let covered = false;
       this.animation.addEventListener('enterFrame', ({ currentTime }) => {
-        if (!covered && currentTime >= objectCover - objectSegment[0]) {
+        if (!covered && currentTime >= finaleCover) {
           covered = true;
           this.emit('scene-cover');
         }
@@ -44,7 +48,7 @@ class AssessmentScene extends LitElement {
         if (!covered) this.emit('scene-cover');
         this.emit('scene-end');
       });
-      this.animation.playSegments(objectSegment, true);
+      this.animation.play();
     } catch {
       if (!this.isConnected) return;
       this.emit('scene-cover');

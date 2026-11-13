@@ -907,6 +907,9 @@ class LearnApp extends LitElement {
     const question = questions[this.answers.length];
     if (status === 'intro' || status === 'done') {
       return html`<section class="assessment assessment-cover">
+        <div class="assessment-motion" aria-hidden="true">
+          <skill-celebration color="ink" ?orbit=${status === 'intro'} ?confetti=${status === 'done'}></skill-celebration>
+        </div>
         <h1>${status === 'intro' ? 'Начнём с софтов?' : 'Готово, молодец!'}</h1>
         ${status === 'intro' ? html`<p>30 ситуаций, примерно 10–15 минут. Выбирай вариант, который ближе к тому, как ты обычно поступаешь.</p>
           <button class="primary" @click=${() => { this.assessmentStatus = 'questions'; }}>Начать</button>`
@@ -914,7 +917,6 @@ class LearnApp extends LitElement {
           <button class="primary" @click=${() => this.go('home')}>Посмотреть навыки</button>`}
       </section>`;
     }
-    const checkpoint = Boolean(this.assessmentPause);
     return html`<section class="assessment">
       <div class="assessment-progress">
         <strong>${Math.min(this.answers.length + 1, questions.length)} из ${questions.length}</strong>
@@ -926,15 +928,16 @@ class LearnApp extends LitElement {
       <div class="assessment-segments" aria-label=${`Отвечено вопросов: ${this.answers.length} из ${questions.length}`}>
         ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
       </div>
-      ${checkpoint ? keyed(this.assessmentPause, html`<div class="encouragement" role="status">${this.avatar(this.person)}
-        <p>${{ 9: 'Молодец, отлично идёшь!', 20: 'Две трети позади, так держать!' }[this.assessmentPause] ?? 'Молодец, финальный рывок!'}</p></div>
-        <assessment-scene class="assessment-burst" kind="cheer"></assessment-scene>`) : nothing}
-      ${question && !this.assessmentPause ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
+      ${this.assessmentPause ? keyed(this.assessmentPause, html`<p class="encouragement-float" role="status">
+        ${{ 9: 'молодец, отлично идёшь!', 20: 'две трети позади, так держать!' }[this.assessmentPause] ?? 'финальный рывок!'}</p>
+        <assessment-scene class="assessment-burst" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}
+          @scene-end=${() => { this.assessmentPause = 0; }}></assessment-scene>`) : nothing}
+      ${question ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
         ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
-      </div></div>`) : checkpoint ? nothing : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
+      </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
       ${status === 'error' ? html`<p role="alert">Результат пока не сохранился. Ответы на месте, попробуй ещё раз.</p>` : nothing}
-      ${this.assessmentPause ? html`<button class="primary" @click=${() => { this.assessmentPause = 0; }}>продолжить</button>` : html`<button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
-        @click=${() => this.nextAnswer()}>${remaining > 1 ? 'Дальше' : 'Сохранить результат'}</button>`}
+      <button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
+        @click=${() => this.nextAnswer()}>${remaining > 1 ? 'Дальше' : 'Сохранить результат'}</button>
     </section>`;
   }
 
@@ -944,10 +947,8 @@ class LearnApp extends LitElement {
       if (this.pendingAnswer === null) return;
       this.answers = [...this.answers, this.pendingAnswer];
       this.pendingAnswer = null;
-      if (assessmentPauses.includes(this.answers.length)) {
-        this.assessmentPause = this.answers.length;
-        return;
-      }
+      // На рубежах отдельного экрана нет: следующий вопрос открывается сразу, а сцена пролетает поверх него.
+      if (assessmentPauses.includes(this.answers.length)) this.assessmentPause = this.answers.length;
     }
     if (this.answers.length < questions.length) {
       this.scrollToTop();

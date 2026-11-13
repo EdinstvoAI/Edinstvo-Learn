@@ -20,4 +20,4 @@
 - [src/skill-growth.js](../src/skill-growth.js) связывает сцену Lottie с сектором менти, [src/project-folders.js](../src/project-folders.js) задаёт каталог обложек, [server/start.js](../server/start.js) обслуживает сборку и API в Docker.
 - [server/input.js](../server/input.js) проверяет входные данные API, [server/telegram.js](../server/telegram.js) проверяет подписи Telegram и считает суточный код. [src/schedule.js](../src/schedule.js) держит даты календаря, фильтры и порядок вариантов теста. Юнит-тесты лежат в [test](../test), запуск `npm test`.
 - [server/mentor-login.js](../server/mentor-login.js) проверяет почту, пароль и PIN ментора, [server/hash-secret.js](../server/hash-secret.js) печатает хеш для `.env`.
-- [src/object-scene.js](../src/object-scene.js) вырезает пролёт объектов из анимации роста для сцен теста, [src/assessment-scene.js](../src/assessment-scene.js) их проигрывает.
+- [src/lottie-scenes.js](../src/lottie-scenes.js) собирает Lottie-сцены теста, [src/assessment-scene.js](../src/assessment-scene.js) их проигрывает, [public/motion/assessment-objects.json](../public/motion/assessment-objects.json) хранит стеклянные объекты.

@@ -8,7 +8,7 @@
 
 - [index.html](../index.html), [src/app.js](../src/app.js), [src/style.css](../src/style.css) — вход, экраны и стили прототипа.
 - [src/skill-chart.js](../src/skill-chart.js), [src/celebration.js](../src/celebration.js) — секторный круг и эффекты Lottie.
-- [src/student-home.css](../src/student-home.css) — мобильная композиция менти. [src/home-backdrop.js](../src/home-backdrop.js) загружает фон главной, экспорт из Figma лежит в [public/mobile-home](../public/mobile-home).
+- [src/student-home.css](../src/student-home.css) — мобильная композиция менти. Иконки и заголовки из Figma лежат в [public/mobile-home](../public/mobile-home).
 - [src/questions.js](../src/questions.js), [src/skills.js](../src/skills.js), [server/assessment.js](../server/assessment.js) — вопросы, общий каталог и серверный ключ.
 - [src/api.js](../src/api.js), [server/api.js](../server/api.js), [vite.config.js](../vite.config.js) — клиент и маршруты API.
 - [server/database.js](../server/database.js), [server/schema.sql](../server/schema.sql), [server/open-local.js](../server/open-local.js) — PostgreSQL, таблицы и вход на Mac.

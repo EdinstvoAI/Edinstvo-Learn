@@ -60,3 +60,19 @@ export function accessCode(secret, mentorId, date = new Date()) {
   const value = createHmac('sha256', secret).update(mentorId + ':' + accessDay.format(date)).digest();
   return String(value.readUInt32BE(0) % 1_000_000).padStart(6, '0');
 }
+
+export function telegramWelcome(update, publicOrigin) {
+  const message = update?.message;
+  if (message?.chat?.type !== 'private' || !Number.isSafeInteger(message.chat.id)
+    || typeof message.text !== 'string' || !/^\/start(?:@[a-z\d_]+)?(?:\s|$)/i.test(message.text)) return {};
+  const app = typeof publicOrigin === 'string' ? URL.parse(publicOrigin) : null;
+  if (app?.protocol !== 'https:' || app.origin !== publicOrigin) {
+    return { method: 'sendMessage', chat_id: message.chat.id,
+      text: 'мини-приложение пока недоступно. попробуй позже или напиши ментору.' };
+  }
+  return {
+    method: 'sendMessage', chat_id: message.chat.id,
+    text: 'привет! это единство learn. здесь твои навыки, задачи и проекты.',
+    reply_markup: { inline_keyboard: [[{ text: 'открыть приложение', web_app: { url: app.href } }]] },
+  };
+}

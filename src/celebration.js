@@ -44,6 +44,36 @@ function burst(color, compact, orbit, confetti) {
   };
 }
 
+function cubeBurst(color) {
+  const palette = color === 'green'
+    ? [[.78, .98, .61], [.46, .77, .23], [.28, .57, .16]]
+    : [[.88, .78, 1], [.63, .42, .94], [.43, .27, .72]];
+  const faces = [
+    [[0, -10], [10, -5], [0, 0], [-10, -5]],
+    [[-10, -5], [0, 0], [0, 11], [-10, 6]],
+    [[0, 0], [10, -5], [10, 6], [0, 11]],
+  ];
+  return {
+    v: '5.13.0', fr: 60, ip: 0, op: 32, w: 100, h: 100, assets: [],
+    layers: [-1, 1].map((side, index) => ({
+      ty: 4, ind: index + 1, ip: 0, op: 32, st: 0, sr: 1,
+      ks: {
+        a: property([0, 0, 0]),
+        p: keyframes([[0, [50, 60, 0]], [16, [50 + side * 25, 38 - index * 9, 0]], [31, [50 + side * 32, 50 - index * 8, 0]]]),
+        r: keyframes([[0, [0]], [31, [side * 64]]]),
+        s: keyframes([[0, [25, 25, 100]], [12, [105, 105, 100]], [31, [52, 52, 100]]]),
+        o: keyframes([[0, [0]], [5, [100]], [16, [100]], [31, [0]]]),
+      },
+      shapes: faces.map((vertices, face) => ({
+        ty: 'gr', it: [
+          { ty: 'sh', ks: property({ c: true, v: vertices, i: vertices.map(() => [0, 0]), o: vertices.map(() => [0, 0]) }) },
+          { ty: 'fl', c: property([...palette[face], 1]), o: property(100), r: 1 },
+        ],
+      })),
+    })),
+  };
+}
+
 function wave(color) {
   return {
     ty: 4, ind: 80, ip: 0, op: 90, st: 0, sr: 1,
@@ -110,7 +140,7 @@ function eraserScene() {
 }
 
 class SkillCelebration extends LitElement {
-  static properties = { color: { type: String }, compact: { type: Boolean }, orbit: { type: Boolean }, eraser: { type: Boolean }, confetti: { type: Boolean }, fly: { type: Boolean } };
+  static properties = { color: { type: String }, compact: { type: Boolean }, orbit: { type: Boolean }, eraser: { type: Boolean }, confetti: { type: Boolean }, cubes: { type: Boolean }, fly: { type: Boolean } };
   static styles = css`
     :host { display: block; pointer-events: none; }
     div { width: 100%; height: 100%; }
@@ -124,7 +154,7 @@ class SkillCelebration extends LitElement {
     if (!this.isConnected) return;
     this.animation = lottie.loadAnimation({
       container: this.renderRoot.querySelector('div'), renderer: 'canvas',
-      animationData: this.eraser ? eraserScene() : burst(this.color, this.compact, this.orbit, this.confetti),
+      animationData: this.cubes ? cubeBurst(this.color) : this.eraser ? eraserScene() : burst(this.color, this.compact, this.orbit, this.confetti),
       loop: false, autoplay: false,
     });
     const text = this.fly ? this.previousElementSibling : null;

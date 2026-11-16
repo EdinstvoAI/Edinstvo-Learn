@@ -61,7 +61,6 @@ class LearnApp extends LitElement {
     celebration: { state: true },
     growth: { state: true },
     photoError: { state: true },
-    contactError: { state: true },
     formBusy: { state: true },
     activeWheel: { state: true },
     activeSector: { state: true },
@@ -478,7 +477,7 @@ class LearnApp extends LitElement {
             aria-label=${title} aria-current=${this.page === id ? 'page' : nothing}
             @click=${() => { this.navMotion = id; this.go(id); }}>
             <span class="dock-label">${title}</span>
-            ${this.page === id && this.navMotion === id ? html`<skill-celebration class="nav-burst" color="purple" compact></skill-celebration>` : nothing}
+            ${this.page === id && this.navMotion === id ? html`<skill-celebration class="nav-burst" color="purple" cubes></skill-celebration>` : nothing}
           </button>`)}
         </nav>
       </div>
@@ -628,9 +627,7 @@ class LearnApp extends LitElement {
   }
 
   profile() {
-    const { name, username, phone, photos = [], createdAt } = this.person;
-    const webApp = window.Telegram?.WebApp;
-    const canSharePhone = this.role === 'mentee' && webApp?.initData && webApp.isVersionAtLeast?.('6.9');
+    const { name, username, photos = [], createdAt } = this.person;
     return html`
       ${this.role === 'mentor' ? html`<div class="student-actions">
         <button class="text-button" @click=${() => this.go('skills')}>Навыки</button>
@@ -646,10 +643,7 @@ class LearnApp extends LitElement {
           <div class="card-face card-front">
             <span class="card-role">${this.person.title || 'менти'}</span>
             <h1>${name}</h1>
-            <div class="profile-contact">
-              ${username ? html`<span>@${username}</span>` : nothing}
-              ${phone ? html`<span>${phone}</span>` : nothing}
-            </div>
+            ${username ? html`<div class="profile-contact">@${username}</div>` : nothing}
           </div>
           <div class="card-face card-back">
             <span class="card-role">первый вход</span>
@@ -659,9 +653,6 @@ class LearnApp extends LitElement {
         </div>
       </section>
       ${this.role === 'mentor' ? html`<button class="text-button profile-title-edit" @click=${() => this.open({ type: 'title' })}>роль на карточке: ${this.person.title || 'не задана'}</button>` : nothing}
-      ${canSharePhone && !phone ? html`<button class="text-button profile-share-phone" ?disabled=${this.formBusy}
-        @click=${() => this.sharePhone(webApp)}>поделиться номером с ментором</button>` : nothing}
-      ${this.contactError ? html`<p class="form-error" role="alert">${this.contactError}</p>` : nothing}
       <section class="profile-lower memories" aria-labelledby="memories-title">
         <header class="memories-header">
           <h2 id="memories-title">воспоминания</h2>
@@ -684,22 +675,6 @@ class LearnApp extends LitElement {
         ${!photos.length && this.role === 'mentor' ? html`<p class="empty">фото пока нет.</p>` : nothing}
         ${this.photoError ? html`<p class="form-error photo-error" role="alert">${this.photoError}</p>` : nothing}
     </section>`;
-  }
-
-  async sharePhone(webApp) {
-    this.formBusy = true;
-    this.contactError = '';
-    try {
-      const response = await new Promise((resolve) => webApp.requestContact((shared, data) => resolve({ shared, data })));
-      if (!response.shared) return;
-      if (!response.data?.response) throw new Error('Telegram не передал номер. Попробуй ещё раз.');
-      await this.mutate('telegram-contact', { contact: response.data.response });
-      await this.refresh();
-    } catch (error) {
-      this.contactError = error.message;
-    } finally {
-      this.formBusy = false;
-    }
   }
 
   async removePhoto(photo) {
@@ -776,7 +751,7 @@ class LearnApp extends LitElement {
       ${this.activeSector >= 0 ? keyed(this.activeSector, html`<div class="skill-readout" role="status">
         <span>${group.labels[this.activeSector]}</span>
         <strong>${group.levels[this.activeSector] === null ? 'Нет оценки' : group.levels[this.activeSector] + '%'}</strong>
-        <skill-celebration class="skill-reveal" color=${group.color} compact></skill-celebration>
+        <skill-celebration class="skill-reveal" color=${group.color} cubes></skill-celebration>
       </div>`) : nothing}
     </section>`;
   }
@@ -1086,14 +1061,14 @@ class LearnApp extends LitElement {
     this.date = this.role === 'mentee' && this.monthView ? shiftMonth(this.date, step) : shiftDate(this.date, step * 7);
   }
 
-  learnerTitle(kind, title) {
+  learnerTitle(title) {
     return html`<header class="home-person"><span>менти</span><p>${this.account.name.split(/\s+/)[0]}</p></header>
-      <h1 class="learner-section-title stretch-title">${title.toLowerCase()}</h1>`;
+      <h1 class="learner-section-title"><span class="stretch-title">${title}</span></h1>`;
   }
 
   projects() {
     return html`
-      ${this.role === 'mentee' ? this.learnerTitle('projects', 'Проекты') : html`<div class="page-title"><div><h1>Проекты</h1><p>${this.person.name}</p></div></div>`}
+      ${this.role === 'mentee' ? this.learnerTitle('проекты') : html`<div class="page-title"><div><h1>Проекты</h1><p>${this.person.name}</p></div></div>`}
       <div class="project-folders">
         ${this.person.projects.map((project) => this.projectCard(project))}
         ${this.personId ? html`<button class="project-folder" @click=${() => this.open({ type: 'new-project', step: 1 })}>

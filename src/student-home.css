@@ -596,6 +596,9 @@ mentor-note { display: block; }
   margin-block: 10px 4px;
 }
 .student-home .home-chart-slot .wheel-disc { width: 64%; }
+.student-home .home-chart-slot .wheel-stage { justify-self: center; margin-inline: auto; min-width: 0; }
+.student-home .home-chart-slot .wheel-disc { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
+.summary-comments { padding: 0; border: 0; background: transparent; font: inherit; text-align: left; }
 .student-home .wheel-disc :is(.wheel-sectors, skill-growth) { inset: 6%; }
 .student-home .wheel-glass { background: linear-gradient(145deg,#fff8,transparent 47%,#fff4); }
 .student-home .wheel-labels button {

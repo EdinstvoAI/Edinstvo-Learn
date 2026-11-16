@@ -1,4 +1,5 @@
 import { LitElement, css, html } from 'lit';
+import { gsap } from 'gsap';
 
 let scene;
 export class SkillGrowth extends LitElement {
@@ -13,6 +14,15 @@ export class SkillGrowth extends LitElement {
   async firstUpdated() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       this.finish();
+      return;
+    }
+    if (this.growth.to < this.growth.from) {
+      const state = { frame: 390 };
+      this.retraction = gsap.to(state, {
+        frame: 500, duration: .68, ease: 'none',
+        onUpdate: () => this.showFrame(state.frame),
+        onComplete: () => this.finish(),
+      });
       return;
     }
     try {
@@ -33,9 +43,7 @@ export class SkillGrowth extends LitElement {
         container: this.renderRoot.querySelector('div'), renderer: 'canvas',
         animationData, loop: false, autoplay: false,
       });
-      this.player.addEventListener('enterFrame', ({ currentTime }) => {
-        this.dispatchEvent(new CustomEvent('growth-frame', { detail: currentTime }));
-      });
+      this.player.addEventListener('enterFrame', ({ currentTime }) => this.showFrame(currentTime));
       // Сцена входит и уходит через прозрачность, чтобы круг и частицы не появлялись и не пропадали рывком.
       this.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
       this.player.addEventListener('complete', async () => {
@@ -49,12 +57,17 @@ export class SkillGrowth extends LitElement {
     }
   }
 
+  showFrame(frame) {
+    this.dispatchEvent(new CustomEvent('growth-frame', { detail: frame }));
+  }
+
   finish(seen = true) {
     this.dispatchEvent(new CustomEvent('growth-end', { detail: seen }));
   }
 
   disconnectedCallback() {
     this.player?.destroy();
+    this.retraction?.kill();
     super.disconnectedCallback();
   }
 }

@@ -122,3 +122,19 @@ test('local join is closed outside local mode and checks the code format', async
   assert.equal(status, 200);
   assert.equal(data.local, false);
 });
+
+test('Telegram webhook welcomes /start in private chats and requires its secret', async () => {
+  const env = { TELEGRAM_BOT_TOKEN: 'test', TELEGRAM_WEBHOOK_SECRET: 'secret', PUBLIC_ORIGIN: 'https://learn.example.org' };
+  const update = { message: { chat: { type: 'private', id: 42 }, text: '/start learn' } };
+  const endpoint = '/telegram/webhook';
+  assert.equal((await call(makeApi(env), post(endpoint, update))).status, 403);
+  const headers = { 'x-telegram-bot-api-secret-token': 'secret' };
+  assert.deepEqual((await call(makeApi(env), post(endpoint, update, headers))).data, {
+    method: 'sendMessage', chat_id: 42, text: 'привет! это единство learn. здесь твои навыки, задачи и проекты.',
+    reply_markup: { inline_keyboard: [[{ text: 'открыть приложение', web_app: { url: 'https://learn.example.org/' } }]] },
+  });
+  const fallback = await call(makeApi({ ...env, PUBLIC_ORIGIN: '' }), post(endpoint, update, headers));
+  assert.match(fallback.data.text, /недоступно/);
+  update.message.chat.type = 'group';
+  assert.deepEqual((await call(makeApi(env), post(endpoint, update, headers))).data, {});
+});

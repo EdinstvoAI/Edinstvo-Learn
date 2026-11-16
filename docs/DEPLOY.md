@@ -212,3 +212,16 @@ learn logs --tail=80 app caddy
 | «Код не подошёл» | Код вчерашний, он меняется в полночь по Волгограду. После пяти ошибок ввод закрыт на 10 минут. |
 | «Сервис временно недоступен» | Приложение не достучалось до базы. Проверь `learn ps` и `learn logs db`. Частая причина — пароль в `.env` изменили после создания тома. |
 | После правки `.env` ничего не поменялось | Настройки читаются при создании контейнера. Выполни `learn up -d --wait`. |
+
+## Приветствие бота
+
+Для ответа на `/start` задай `TELEGRAM_WEBHOOK_SECRET` отдельным значением из `openssl rand -hex 32` в окружении сервера, пересоздай `app` и зарегистрируй webhook. Выполни команду на сервере с уже загруженными переменными окружения.
+
+```sh
+curl --fail-with-body -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  --data-urlencode "url=${PUBLIC_ORIGIN}/api/telegram/webhook" \
+  --data-urlencode "secret_token=${TELEGRAM_WEBHOOK_SECRET}" \
+  --data-urlencode 'allowed_updates=["message"]'
+```
+
+Проверь `/start` в личном чате с ботом. Telegram поддерживает один webhook на бота. Если бот уже принимает обновления в другом сервисе, перенеси обработчик команды туда до переключения webhook.

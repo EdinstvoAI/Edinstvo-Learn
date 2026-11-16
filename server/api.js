@@ -4,18 +4,18 @@ import { openDatabase } from './database.js';
 import { scoreAssessment } from './assessment.js';
 import { ApiError, allowed, lowerText, projectSources, requireInput, shortText, taskSchedule, uuid } from './input.js';
 import { attemptLimiter, mentorCredentialsValid, mentorLoginConfigured } from './mentor-login.js';
-import { accessCode as dailyCode, hash, safeEqual, telegramPhone, telegramUser } from './telegram.js';
+import { accessCode as dailyCode, hash, safeEqual, telegramPhone, telegramUser, telegramWelcome } from './telegram.js';
 
 const folderNames = new Set('grass fur cheese leopard turf chrome gel vinyl terrazzo nylon corduroy foil gingham cactus cloud'.split(' '));
 const photoTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif']);
 const token = () => randomBytes(32).toString('hex');
 
-async function bodyOf(request) {
+async function bodyOf(request, limit = 14 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 14 * 1024 * 1024) throw new ApiError(413, 'Файл слишком большой.');
+    if (size > limit) throw new ApiError(413, 'Файл слишком большой.');
     chunks.push(chunk);
   }
   try {
@@ -351,8 +351,15 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
     close: () => database?.close(),
     async middleware(request, response) {
       try {
-        if (!database) throw new ApiError(503, 'Подключи PostgreSQL.');
         const route = new URL(request.url, 'http://localhost').pathname;
+        if (request.method === 'POST' && route === '/telegram/webhook') {
+          allowed(Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_WEBHOOK_SECRET)
+            && safeEqual(request.headers['x-telegram-bot-api-secret-token'], env.TELEGRAM_WEBHOOK_SECRET));
+          requireInput(request.headers['content-type']?.startsWith('application/json'));
+          json(response, 200, telegramWelcome(await bodyOf(request, 128 * 1024), env.PUBLIC_ORIGIN));
+          return;
+        }
+        if (!database) throw new ApiError(503, 'Подключи PostgreSQL.');
         const client = await database.ready();
         const actor = await actorFor(client, request);
         if (request.method === 'GET' && route === '/state') {

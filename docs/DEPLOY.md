@@ -1,6 +1,6 @@
 # Развёртывание
 
-Продакшен состоит из трёх контейнеров: `caddy` принимает HTTPS и сам выпускает сертификат, `app` отдаёт фронтенд и API, `db` хранит данные PostgreSQL в томе `learn-data`. Наружу открыт только Caddy.
+Продакшен состоит из двух контейнеров: `app` отдаёт фронтенд и API на `127.0.0.1:5188`, `db` хранит данные PostgreSQL в томе `learn-data`. Установленный на сервере Nginx принимает HTTPS и проксирует запросы в приложение.
 
 ## Локальная проверка на своём компьютере
 
@@ -75,7 +75,7 @@ alias learn='docker compose -f compose.yaml -f compose.prod.yaml'
 
 - Сервер с Linux, Docker Engine и плагином Docker Compose v2. Хватит 1 vCPU, 1 ГБ памяти и 10 ГБ диска.
 - Домен или поддомен, например `learn.example.com`. A-запись указывает на IP сервера.
-- Открытые входящие порты 80 и 443. Они нужны Caddy для сертификата и HTTPS. [Требования Caddy](https://caddyserver.com/docs/automatic-https#overview)
+- Nginx с HTTPS-сертификатом для домена. Входящие порты 80 и 443 должны быть открыты.
 - Бот в Telegram. Токен выдаёт [@BotFather](https://t.me/BotFather) командой `/newbot`.
 - Числовой Telegram ID ментора. Напиши своему боту любое сообщение и открой `https://api.telegram.org/bot<токен>/getUpdates`, ID лежит в `message.from.id`. Способ работает, пока у бота нет webhook.
 
@@ -120,7 +120,33 @@ openssl rand -hex 32
 learn up -d --build --wait
 ```
 
-6. Проверь результат.
+6. Добавь виртуальный хост Nginx. Сертификат можно выпустить через Certbot после включения конфига.
+
+```nginx
+server {
+    listen 80;
+    server_name learn.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:5188;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+```sh
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d learn.example.com
+```
+
+Замени `learn.example.com` на домен из `PUBLIC_ORIGIN`.
+
+7. Проверь результат.
 
 ```sh
 learn ps
@@ -130,11 +156,11 @@ learn ps
 curl -s https://learn.example.com/api/state
 ```
 
-Все три контейнера должны быть в состоянии `running`, у `db` и `app` статус `healthy`. Запрос возвращает JSON, в котором есть `"telegram":true`. Первый сертификат Caddy получает до минуты.
+Оба контейнера должны быть в состоянии `running`, у `db` и `app` статус `healthy`. Запрос возвращает JSON, в котором есть `"telegram":true`.
 
-7. Подключи приложение к боту. В BotFather: `/mybots` → бот → `Bot Settings` → `Menu Button` → укажи адрес из `PUBLIC_ORIGIN`. [Настройка кнопки меню](https://core.telegram.org/bots/webapps#launching-mini-apps-from-the-menu-button)
-8. Открой бота своим аккаунтом и нажми кнопку меню. Откроется список учеников. В «Моём кабинете» виден шестизначный код.
-9. Менти открывает того же бота и вводит код. Код меняется в полночь по Волгограду и нужен один раз, при первой активации. Затем менти один раз проходит входной тест.
+8. Подключи приложение к боту. В BotFather: `/mybots` → бот → `Bot Settings` → `Menu Button` → укажи адрес из `PUBLIC_ORIGIN`. [Настройка кнопки меню](https://core.telegram.org/bots/webapps#launching-mini-apps-from-the-menu-button)
+9. Открой бота своим аккаунтом и нажми кнопку меню. Откроется список учеников. В «Моём кабинете» виден шестизначный код.
+10. Менти открывает того же бота и вводит код. Код меняется в полночь по Волгограду и нужен один раз, при первой активации. Затем менти один раз проходит входной тест.
 
 ## Вход ментора из браузера
 
@@ -196,17 +222,17 @@ learn start app
 
 ## Если что-то не работает
 
-Логи приложения и Caddy:
+Логи приложения:
 
 ```sh
-learn logs --tail=80 app caddy
+learn logs --tail=80 app
 ```
 
 | Симптом | Причина и решение |
 |---|---|
 | `up` сразу падает с `Set ...` | В `.env` не заполнена названная переменная. |
 | `app` перезапускается, в логе `Set PUBLIC_ORIGIN to an HTTPS origin` | `PUBLIC_ORIGIN` с путём, со слешем в конце или без `https://`, либо `TELEGRAM_MENTOR_ID` содержит не только цифры. |
-| Браузер пишет об ошибке сертификата | DNS ещё не указывает на сервер или закрыты порты 80 и 443. Причина видна в логе `caddy`. |
+| Браузер пишет об ошибке сертификата | DNS ещё не указывает на сервер, закрыты порты 80 и 443 или сертификат Nginx не выпущен. Проверь `sudo nginx -t` и журнал Nginx. |
 | В Telegram «У этого аккаунта нет доступа» | Токен бота в `.env` от другого бота, либо часы сервера расходятся с реальным временем больше чем на 10 минут. |
 | Ментор видит экран ученика | В `TELEGRAM_MENTOR_ID` чужой ID. Исправь значение и выполни `learn up -d --wait`. |
 | «Код не подошёл» | Код вчерашний, он меняется в полночь по Волгограду. После пяти ошибок ввод закрыт на 10 минут. |

@@ -11,7 +11,7 @@ import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
 import { compressPhoto, encodePhoto, request, telegramData } from './api.js';
-import { assessmentPauses, filterTasks, formatDate, parseDate, shiftDate, shuffledAnswers, taskOnDay, tasksByWeek } from './schedule.js';
+import { assessmentPauses, filterTasks, formatDate, monthGrid, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, tasksByWeek, weekStart } from './schedule.js';
 import './style.css';
 import './student-home.css';
 
@@ -49,6 +49,7 @@ class LearnApp extends LitElement {
     tasks: { state: true },
     date: { state: true },
     calendarFilter: { state: true },
+    monthView: { state: true },
     selections: { state: true },
     modal: { state: true },
     answers: { state: true },
@@ -990,10 +991,13 @@ class LearnApp extends LitElement {
 
   calendar() {
     const selected = parseDate(this.date);
-    const offset = (selected.getUTCDay() + 6) % 7;
     const currentDay = today();
-    const filteredTasks = filterTasks(this.personTasks, this.calendarFilter, this.date);
+    const tasks = this.personTasks;
+    const filteredTasks = filterTasks(tasks, this.calendarFilter, this.date);
     const learner = this.role === 'mentee';
+    const month = learner && this.monthView;
+    const start = weekStart(this.date);
+    const days = month ? monthGrid(this.date) : weekDays.map((_, index) => shiftDate(start, index));
     return html`
       ${learner ? html`<header class="home-person"><span>менти</span><p>${this.account.name.split(/\s+/)[0]}</p></header>`
         : html`<div class="page-title"><div><h1>Календарь</h1><p>${this.person.name}</p></div></div>`}
@@ -1003,24 +1007,35 @@ class LearnApp extends LitElement {
             if (this.weekTouch === undefined) return;
             const distance = event.changedTouches[0].clientX - this.weekTouch;
             this.weekTouch = undefined;
-            if (Math.abs(distance) > 44) this.moveWeek(distance < 0 ? 7 : -7);
+            if (Math.abs(distance) > 44) this.movePeriod(distance < 0 ? 1 : -1);
           }}>
-          <h2 class="cal-month stretch-title">${monthName.format(selected)}</h2>
-          <div class="cal-week" aria-label="Дни недели">${weekDays.map((day, index) => {
-            const key = shiftDate(this.date, index - offset);
-            const date = parseDate(key);
-            const busy = this.personTasks.some((task) => taskOnDay(task, key));
-            return html`<button aria-label=${longDate.format(date)} aria-pressed=${this.date === key}
-              aria-current=${key === currentDay ? 'date' : nothing} class=${busy ? 'is-busy' : ''} @click=${() => { this.date = key; this.calendarFilter = 'today'; }}>
-              <small>${day}</small><strong>${date.getUTCDate()}</strong>
-            </button>`;
-          })}</div>
+          <div class="cal-period-head">
+            <div><h2 class="cal-month stretch-title">${monthName.format(selected)}</h2>
+              ${month ? html`<span class="cal-year">${selected.getUTCFullYear()}</span>` : nothing}</div>
+            ${learner ? html`<div class="cal-period" role="group" aria-label="Вид календаря">
+              ${[[false, 'неделя'], [true, 'месяц']].map(([value, label]) => html`
+                <button type="button" aria-pressed=${Boolean(this.monthView) === value}
+                  @click=${() => { this.monthView = value; }}>${label}</button>`)}
+            </div>` : nothing}
+          </div>
+          <div class="cal-week" aria-hidden="true">${weekDays.map((day) => html`<span>${day}</span>`)}</div>
+          <div class="cal-week cal-days" ?data-month=${month} aria-label=${month ? 'Дни месяца' : 'Дни недели'}>
+            ${days.map((key) => {
+              const date = parseDate(key);
+              const busy = tasks.some((task) => taskOnDay(task, key));
+              const outside = month && key.slice(0, 7) !== this.date.slice(0, 7);
+              return html`<button aria-label=${longDate.format(date) + (busy ? ', есть задачи' : '')} aria-pressed=${this.date === key}
+                aria-current=${key === currentDay ? 'date' : nothing} class=${[busy && 'is-busy', outside && 'is-outside'].filter(Boolean).join(' ')}
+                @click=${() => { this.date = key; this.calendarFilter = 'today'; }}><strong>${date.getUTCDate()}</strong></button>`;
+            })}
+          </div>
           <div class="cal-nav">
-            <button class="text-button" @click=${() => this.moveWeek(-7)}>предыдущая</button>
-            <button class="text-button" @click=${() => this.moveWeek(7)}>следующая</button>
+            <button class="text-button" @click=${() => this.movePeriod(-1)}>${month ? 'предыдущий месяц' : 'предыдущая'}</button>
+            <button class="text-button" @click=${() => this.movePeriod(1)}>${month ? 'следующий месяц' : 'следующая'}</button>
           </div>
         </section>
         <section class="cal-list">
+          ${month && this.calendarFilter === 'today' ? html`<h2 class="cal-selected-day">${longDate.format(selected)}</h2>` : nothing}
           <div class="cal-toggle" role="tablist" aria-label="Фильтр задач">
             ${[['today', 'все'], ['new', 'новые']].map(([value, label]) => html`<button role="tab" aria-selected=${this.calendarFilter === value}
               @click=${() => { this.calendarFilter = value; }}>${label}</button>`)}
@@ -1052,8 +1067,8 @@ class LearnApp extends LitElement {
     </div>`;
   }
 
-  moveWeek(days) {
-    this.date = shiftDate(this.date, days);
+  movePeriod(step) {
+    this.date = this.role === 'mentee' && this.monthView ? shiftMonth(this.date, step) : shiftDate(this.date, step * 7);
   }
 
   learnerTitle(kind, title) {

@@ -44,42 +44,7 @@
   font: 13px "Martian Mono", monospace;
   color: #4e37c6;
 }
-.skill-readout::after {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 2px;
-  background: var(--violet);
-  box-shadow: -11px 0 24px 10px #aa9cf4a6;
-  animation: skill-scan .58s cubic-bezier(.2,.6,.28,1) both;
-  pointer-events: none;
-}
-.skill-readout::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background:
-    radial-gradient(circle at 14% 28%, #b9f477 0 3px, transparent 4px),
-    radial-gradient(circle at 27% 70%, #d8ffab 0 2px, transparent 3px),
-    radial-gradient(circle at 47% 40%, #91ea42 0 3px, transparent 4px),
-    radial-gradient(circle at 68% 76%, #c6ff8d 0 2px, transparent 3px),
-    radial-gradient(circle at 82% 22%, #8ee93b 0 3px, transparent 4px),
-    radial-gradient(circle at 92% 62%, #d8ffab 0 2px, transparent 3px);
-  animation: skill-pixels .62s cubic-bezier(.18,.72,.25,1) both;
-}
-@keyframes skill-pixels {
-  0% { opacity: 0; transform: translateX(-14px) scale(.7); }
-  28% { opacity: .95; }
-  72% { opacity: .55; transform: translateX(6px) scale(1); }
-  100% { opacity: 0; transform: translateX(18px) scale(.8); }
-}
-@keyframes skill-scan {
-  from { left: 0; opacity: .9; }
-  85% { opacity: .6; }
-  to { left: 100%; opacity: 0; }
-}
+
 .home-agenda { display: grid; gap: 16px; min-width: 0; }
 .day-sheet {
   overflow: hidden;
@@ -185,7 +150,6 @@ mentor-note { display: block; }
   .student-home .home-projects { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .skill-readout::after, .skill-readout::before { display: none; }
 }
 .student-shell { height: var(--tg-viewport-stable-height, 100dvh); display: grid; grid-template-rows: minmax(0,1fr) auto; }
 .student-scroll { min-height: 0; overflow: auto; overscroll-behavior-y: contain; }
@@ -854,7 +818,7 @@ learn-app .memories-header h2, learn-app .memories-header p { width: 100%; text-
 .learner-section-title.stretch-title, .home-asset-heading.stretch-title { display: block; text-align: center; padding: 18px 0 30px; transform-origin: center top; }
 .cal-month.stretch-title { margin-bottom: 22px; transform-origin: left top; }
 /* Выбранный навык: карточка с названием и процентом, кнопка повтора роста. */
-learn-app .skill-readout { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px 12px; margin: 12px 4px 0; padding: 16px 18px; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px #0000000d; }
+learn-app .skill-readout { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px 12px; margin: 12px 4px 0; padding: 16px 18px; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px #0000000d; }
 learn-app .skill-readout span { font-size: 18px; }
 learn-app .skill-readout strong { font: 600 20px 'Martian Mono', monospace; }
 .growth-replay { grid-column: 1 / -1; justify-self: center; min-height: 44px; padding: 0 22px; border: 0; border-radius: 14px; background: #1f2630; color: #fff; font: inherit; cursor: pointer; }
@@ -911,7 +875,10 @@ learn-app .summary-avatar .avatar-image { display: inline-grid; width: 26px; hei
 
 .student-dock .dock-label { font-size: 15px; line-height: 1; color: #676767; }
 .student-dock .active .dock-label { color: #151515; }
-.student-shell[data-page=projects] .learner-section-title.stretch-title { scale: .82 1.5; transform-origin: center top; }
+.student-shell[data-page=projects] .learner-section-title { padding: 18px 0 30px; line-height: 0; }
+.student-shell[data-page=projects] .learner-section-title .stretch-title {
+  display: block; transform-origin: center top; margin-bottom: 20px;
+}
 .new-folder-art > span { position: absolute; inset: 50% auto auto 50%; translate: -50% -50%; font-size: 30px; color: #292929; }
 .project-folder .folder-art img, .folder-options img { mix-blend-mode: normal; }
 .project-page .project-week { border-left: 2px solid #dedede; padding-left: 12px; margin-block: 12px; }
@@ -922,3 +889,7 @@ dialog[data-project-wizard] .dialog-top, .wizard-back { flex: none; }
 dialog[data-project-wizard] form { display: flex; flex-direction: column; min-height: 0; }
 .wizard-body { overflow: auto; min-height: 0; overscroll-behavior: contain; padding: 2px; }
 dialog[data-project-wizard] form > .primary { flex: none; min-height: 44px; text-transform: lowercase; }
+
+.student-shell[data-page=home] .home-person { position: relative; }
+.skill-readout > span { min-width: 0; overflow-wrap: anywhere; }
+.skill-reveal { position: absolute; right: 10px; top: 50%; translate: 0 -50%; width: 56px; height: 56px; }

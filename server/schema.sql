@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS tasks (
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS telegram_photo_url text;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS telegram_username text;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS project_id uuid;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS ics_import_key text;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS all_day boolean NOT NULL DEFAULT false;
+CREATE UNIQUE INDEX IF NOT EXISTS tasks_person_ics_key_idx ON tasks (person, ics_import_key);
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS start_day date;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_day date;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS end_time time;

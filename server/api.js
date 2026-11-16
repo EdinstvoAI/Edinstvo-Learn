@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { parseCalendar } from './calendar-import.js';
 import { openDatabase } from './database.js';
 import { scoreAssessment } from './assessment.js';
 import { ApiError, allowed, lowerText, projectSources, requireInput, shortText, taskSchedule, uuid } from './input.js';
@@ -177,7 +178,7 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
     const [tasks, photos] = await Promise.all([
       client.query(`SELECT id, person, title, day::text AS date, COALESCE(start_day, day)::text AS "startDate",
         COALESCE(end_day, day)::text AS "endDate", to_char(time, 'HH24:MI') AS time,
-        to_char(COALESCE(end_time, time), 'HH24:MI') AS "endTime", created_at AS "createdAt", movable, done, project_id AS "projectId"
+        to_char(COALESCE(end_time, time), 'HH24:MI') AS "endTime", created_at AS "createdAt", movable, done, all_day AS "allDay", project_id AS "projectId"
         FROM tasks WHERE person = ANY($1::uuid[]) ORDER BY day, time`, [ids]),
       client.query(`SELECT id, person, caption, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date
         FROM photos WHERE person = ANY($1::uuid[]) ORDER BY created_at DESC`, [ids]),
@@ -295,6 +296,20 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         requireInput(typeof data.id === 'string' && uuid.test(data.id));
         await client.query('DELETE FROM photos WHERE id = $1 AND person = $2', [data.id, person]);
         return {};
+      } else if (action === 'import-calendar') {
+        allowed(mentor);
+        const events = parseCalendar(data.ics);
+        const inserted = await client.query(`
+          INSERT INTO tasks (person, title, day, start_day, end_day, time, end_time, all_day, ics_import_key)
+          SELECT $1, title, "startDate", "startDate", "endDate", time, "endTime", "allDay", "importKey"
+          FROM jsonb_to_recordset($2::jsonb) AS event(title text, "startDate" date, "endDate" date,
+            time time, "endTime" time, "allDay" boolean, "importKey" text)
+          ON CONFLICT (person, ics_import_key) DO NOTHING RETURNING start_day::text AS date
+        `, [person, JSON.stringify(events)]);
+        const dates = inserted.rows.map(({ date }) => date).sort();
+        const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Volgograd' }).format(new Date());
+        return { imported: dates.length, duplicates: events.length - dates.length,
+          firstDate: dates.find((date) => date >= today) ?? dates.at(-1) };
       } else if (action === 'create-task' || action === 'link-task') {
         const projectId = data.projectId || null;
         requireInput(!projectId || (profile.projects ?? []).some((project) => project.id === projectId),

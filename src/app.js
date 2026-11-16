@@ -335,13 +335,18 @@ class LearnApp extends LitElement {
     const dy = event.clientY - drag.y;
     drag.moved ||= Math.hypot(dx, dy) > 6;
     drag.current = drag.base + dx * .6;
-    if (drag.moved) this.turnCard(drag.current, Math.max(-35, Math.min(35, -dy * .35)), true);
+    if (drag.moved) {
+      this.manualMotion = true;
+      this.turnCard(drag.current, Math.max(-35, Math.min(35, -dy * .35)), true);
+    }
   }
 
   cardUp(event) {
     const drag = this.cardDrag;
     if (!drag) return;
     this.cardDrag = null;
+    if (event.type === 'pointercancel' && !drag.moved) return;
+    this.manualMotion = true;
     // pointercancel приходит без координат, поэтому берём последний угол из движения.
     const current = drag.current ?? drag.base;
     this.cardTurn = drag.moved ? Math.round(current / 180) * 180 : drag.base + 180;
@@ -591,6 +596,7 @@ class LearnApp extends LitElement {
   }
 
   home() {
+    const comments = this.person.projects.reduce((total, project) => total + (project.comments?.length ?? 0), 0);
     const note = Object.values(this.person.mentorScores ?? {}).some((entry) => entry.reason);
     const firstName = this.account.name.split(/\s+/)[0];
     const hour = new Date().getHours();
@@ -607,7 +613,9 @@ class LearnApp extends LitElement {
         <section class="home-summary" aria-label="Сводка">
           <p><span class="summary-muted">${greeting},</span> <span class="summary-avatar">${this.avatar(this.person)}</span> <strong>${firstName}</strong></p>
           <p><span class="summary-muted">у тебя</span> <span aria-hidden="true">📅</span> <strong>${active ? active + ' ' + taskLabel : 'пока нет задач'}</strong></p>
-          ${note ? html`<p><span aria-hidden="true">💬</span> комментарий ментора</p>` : nothing}
+          ${comments ? html`<p><span aria-hidden="true">💬</span> <button class="summary-comments" @click=${() => this.go('projects')}>
+            ${comments} ${{ one: 'комментарий', few: 'комментария', many: 'комментариев' }[new Intl.PluralRules('ru').select(comments)]} ментора</button></p>`
+            : note ? html`<p><span aria-hidden="true">💬</span> комментарий ментора</p>` : nothing}
         </section>
         <div class="home-inner-sheet">
           <section class="helper-panel">
@@ -631,7 +639,7 @@ class LearnApp extends LitElement {
       <section class="profile-card3d" aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
         @pointerdown=${(event) => this.cardDown(event)} @pointermove=${(event) => this.cardMove(event)}
         @pointerup=${(event) => this.cardUp(event)} @pointercancel=${(event) => this.cardUp(event)}
-        @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
+        @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.manualMotion = true; this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
         <div class="profile-card-3d" style=${'--turn-y:' + (this.cardTurn ?? 0) + 'deg'}>
           ${Array.from({ length: 6 }, (_, index) => html`<span class="card-slice" style=${'--slice:' + index} aria-hidden="true"></span>`)}
           <div class="card-face card-front">
@@ -800,9 +808,9 @@ class LearnApp extends LitElement {
   }
 
   wheelStart(event) {
-    if (event.pointerType !== 'touch' || event.target.closest('button')) return;
+    if (!event.isPrimary || event.button !== 0 || event.target.closest('button')) return;
     this.ignoreWheelClick = false;
-    this.swipe = { x: event.clientX, y: event.clientY };
+    this.swipe = { x: event.clientX, y: event.clientY, touch: event.pointerType === 'touch', moved: false };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -810,11 +818,14 @@ class LearnApp extends LitElement {
     if (!this.swipe) return;
     const dx = event.clientX - this.swipe.x;
     const dy = event.clientY - this.swipe.y;
+    const { touch, moved } = this.swipe;
     this.swipe = null;
-    if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+    if (moved) {
       this.ignoreWheelClick = true;
-      this.shiftWheel(dx < 0 ? 1 : -1, count);
       setTimeout(() => { this.ignoreWheelClick = false; }, 300);
+    }
+    if (touch && Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+      this.shiftWheel(dx < 0 ? 1 : -1, count);
     }
   }
 
@@ -829,14 +840,18 @@ class LearnApp extends LitElement {
   }
 
   pointerTilt(event) {
-    if (event.pointerType !== 'mouse') return;
+    if (this.swipe && Math.hypot(event.clientX - this.swipe.x, event.clientY - this.swipe.y) > 6) {
+      this.swipe.moved = true;
+      this.manualMotion = true;
+    }
+    if (!this.swipe?.moved && (event.pointerType !== 'mouse' || this.telegramOrientation && !this.manualMotion)) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     this.tilt((0.5 - (event.clientY - bounds.top) / bounds.height) * 34,
       ((event.clientX - bounds.left) / bounds.width - 0.5) * 34, 0);
   }
 
   onOrientation(event) {
-    if (this.motionState !== 'ready' || !['home', 'profile'].includes(this.page) || event.beta === null || event.gamma === null) return;
+    if (this.manualMotion || this.motionState !== 'ready' || !['home', 'profile'].includes(this.page) || event.beta === null || event.gamma === null) return;
     const neutral = this.neutralOrientation ??= { beta: event.beta, gamma: event.gamma, alpha: event.alpha };
     const limit = (angle, max) => Math.max(-max, Math.min(max, angle));
     if (this.page === 'profile') {
@@ -845,7 +860,7 @@ class LearnApp extends LitElement {
       this.cardTilt = [limit((event.gamma - neutral.gamma) * 1.1, 32), limit(-(event.beta - neutral.beta) * .8, 24)];
       this.cardFrame ||= requestAnimationFrame(() => {
         this.cardFrame = 0;
-        if (!this.cardDrag && this.page === 'profile') this.turnCard((this.cardTurn ?? 0) + this.cardTilt[0], this.cardTilt[1], true);
+        if (!this.manualMotion && !this.cardDrag && this.page === 'profile') this.turnCard((this.cardTurn ?? 0) + this.cardTilt[0], this.cardTilt[1], true);
       });
       return;
     }

@@ -264,11 +264,27 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
           reached = !group.celebrated && group.levels.every((level) => level >= 75);
           group.celebrated ||= reached;
         }
-        if (to > from) {
+        if (to !== from) {
           profile.skillGrowth = [...(profile.skillGrowth ?? []), { id: randomUUID(), key, index, from, to }];
         }
         await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
         return { reached };
+      } else if (action === 'read-project-comments') {
+        allowed(!mentor);
+        const project = profile.projects?.find((item) => item.id === data.projectId);
+        const ids = data.ids;
+        requireInput(project && Array.isArray(ids) && ids.length > 0 && ids.length <= 100
+          && ids.every((id) => typeof id === 'string' && uuid.test(id)));
+        const selected = new Set(ids);
+        const readAt = new Date().toISOString();
+        const confirmed = [];
+        for (const comment of project.comments ?? []) {
+          if (!selected.has(comment.id)) continue;
+          comment.readAt ??= readAt;
+          confirmed.push(comment.id);
+        }
+        await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
+        return { ids: confirmed };
       } else if (action === 'project-comment') {
         allowed(mentor);
         const project = profile.projects?.find((item) => item.id === data.projectId);
@@ -280,9 +296,11 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
       } else if (action === 'project') {
         const name = lowerText(data.name, 80);
         requireInput(name && (!data.folder || folderNames.has(data.folder)));
-        profile.projects = [...(profile.projects ?? []), {
-          id: randomUUID(), name, folder: data.folder || 'gel', description: lowerText(data.description, 160), sources: projectSources(data),
-        }];
+        const project = { id: randomUUID(), name, folder: data.folder || 'gel',
+          description: lowerText(data.description, 160), sources: projectSources(data) };
+        profile.projects = [...(profile.projects ?? []), project];
+        await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
+        return { projectId: project.id };
       } else if (action === 'photo') {
         allowed(!mentor);
         requireInput(photoTypes.has(data.mime) && typeof data.contents === 'string');

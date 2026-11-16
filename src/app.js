@@ -97,6 +97,8 @@ class LearnApp extends LitElement {
     this.photoError = '';
     this.formBusy = false;
     this.activeWheel = 0;
+    this.confirmedCommentReads = new Set();
+    this.pendingCommentReads = new Set();
     this.activeSector = -1;
     this.wheelMotion = 0;
     this.selectedProject = null;
@@ -162,6 +164,7 @@ class LearnApp extends LitElement {
       window.Telegram.WebApp.DeviceOrientation.stop();
     }
     this.leaveSkills?.cancel();
+    this.commentObserver?.disconnect();
     cancelAnimationFrame(this.scrollFrame);
     clearInterval(this.codeTimer);
     super.disconnectedCallback();
@@ -214,13 +217,56 @@ class LearnApp extends LitElement {
   }
 
   updated(changes) {
+    if (changes.has('page') || changes.has('people') || changes.has('selectedProject')) this.observeProjectComments();
     if (!changes.has('page') && !changes.has('people') && !changes.has('growth')) return;
     if (this.role !== 'mentee' || this.page !== 'home' || this.growth) return;
-    const event = this.person.skillGrowth?.find((item) => !this.playedGrowth.has(item.id));
+    const event = this.person.skillGrowth?.find((item) => {
+      const count = item.key === 'soft' ? softSkills.length : this.person.hard[item.key]?.skills.length ?? 0;
+      return item.index >= 0 && item.index < count && !this.playedGrowth.has(item.id);
+    });
     if (event) {
       this.activeWheel = event.key === 'soft' ? 0 : event.key + 1;
       this.activeSector = -1;
       this.growth = event;
+    }
+  }
+
+  commentUnread(comment) {
+    return this.role === 'mentee' && !comment.readAt && !this.confirmedCommentReads.has(comment.id);
+  }
+
+  observeProjectComments() {
+    this.commentObserver?.disconnect();
+    if (this.role !== 'mentee' || this.page !== 'project') return;
+    const projectId = this.selectedProject?.id;
+    const targets = this.querySelectorAll('[data-unread-comment]');
+    if (!projectId || !targets.length) return;
+    this.commentObserver = new IntersectionObserver((entries, observer) => {
+      const ids = [];
+      for (const { isIntersecting, target } of entries) {
+        if (!isIntersecting) continue;
+        const id = target.dataset.unreadComment;
+        if (this.pendingCommentReads.has(id)) continue;
+        observer.unobserve(target);
+        this.pendingCommentReads.add(id);
+        ids.push(id);
+      }
+      for (let index = 0; index < ids.length; index += 100) {
+        void this.confirmComments(projectId, ids.slice(index, index + 100));
+      }
+    });
+    for (const target of targets) this.commentObserver.observe(target);
+  }
+
+  async confirmComments(projectId, ids) {
+    try {
+      const result = await this.mutate('read-project-comments', { projectId, ids });
+      for (const id of result.ids) this.confirmedCommentReads.add(id);
+      this.requestUpdate();
+    } catch {
+      // При повторном открытии проекта видимые комментарии можно подтвердить снова.
+    } finally {
+      for (const id of ids) this.pendingCommentReads.delete(id);
     }
   }
 
@@ -237,6 +283,14 @@ class LearnApp extends LitElement {
     this.people = state.people;
     this.tasks = state.tasks;
     if (!this.people.some((person) => person.id === this.personId)) this.personId = this.people[0]?.id ?? null;
+    const group = this.person.hard[this.activeWheel - 1];
+    if (this.activeWheel > 0 && !group?.skills.length) {
+      this.activeWheel = 0;
+      this.activeSector = -1;
+      this.growth = null;
+    } else if (group && this.activeSector >= group.skills.length) {
+      this.activeSector = -1;
+    }
   }
 
   async refresh() {
@@ -557,7 +611,7 @@ class LearnApp extends LitElement {
         <assessment-scene class="assessment-burst" kind=${this.assessmentPause === 20 ? 'strong' : 'cheer'}
           @scene-end=${() => { this.assessmentPause = 0; }}></assessment-scene>`) : nothing}
       ${this.finale ? html`<assessment-scene class="assessment-finale" kind="finale"
-        @scene-cover=${() => { this.assessmentStatus = 'done'; }} @scene-end=${() => { this.finale = false; }}></assessment-scene>` : nothing}
+        @scene-cover=${() => this.go('home')} @scene-end=${() => { this.finale = false; }}></assessment-scene>` : nothing}
       <dialog ?data-project-wizard=${this.modal?.type === 'new-project'} aria-labelledby="dialog-title" @cancel=${(event) => {
         if (this.formBusy) event.preventDefault();
       }} @close=${() => { if (this.modal?.preview) URL.revokeObjectURL(this.modal.preview); this.modal = null; }}>${this.modal ? this.modalContent() : nothing}</dialog>`;
@@ -598,7 +652,8 @@ class LearnApp extends LitElement {
   }
 
   home() {
-    const comments = this.person.projects.reduce((total, project) => total + (project.comments?.length ?? 0), 0);
+    const comments = this.person.projects.reduce((total, project) =>
+      total + (project.comments?.filter((comment) => this.commentUnread(comment)).length ?? 0), 0);
     const note = Object.values(this.person.mentorScores ?? {}).some((entry) => entry.reason);
     const firstName = this.account.name.split(/\s+/)[0];
     const hour = new Date().getHours();
@@ -697,21 +752,21 @@ class LearnApp extends LitElement {
   }
 
   wheelCarousel() {
-    const hardGroups = this.person.hard.length
-      ? this.person.hard : [{ name: '', skills: [], levels: [] }];
     const groups = [
-      { labels: softSkills, levels: this.softLevels(), color: 'green' },
-      ...hardGroups.map((group) => ({ detail: group.name, labels: group.skills, levels: group.levels, color: 'purple' })),
+      { labels: softSkills, levels: this.softLevels(), color: 'green', wheel: 0 },
+      ...this.person.hard.flatMap((group, index) => group.skills.length
+        ? [{ detail: group.name, labels: group.skills, levels: group.levels, color: 'purple', wheel: index + 1 }]
+        : []),
     ];
-    const group = groups[this.activeWheel] ?? groups[0];
+    const group = groups.find(({ wheel }) => wheel === this.activeWheel) ?? groups[0];
     const growth = this.growth;
     return html`<section class="home-wheel ${group.color}" aria-label="Круги навыков">
-      ${this.activeWheel > 0 && this.person.hard.length > 1 ? html`<div class="wheel-groups" aria-label="Круги хардов">
-        ${groups.slice(1).map((item, index) => html`<button aria-pressed=${this.activeWheel === index + 1}
-          @click=${() => this.setWheel(index + 1)}>${item.detail}</button>`)}
+      ${this.activeWheel > 0 && groups.length > 2 ? html`<div class="wheel-groups" aria-label="Круги хардов">
+        ${groups.slice(1).map((item) => html`<button aria-pressed=${this.activeWheel === item.wheel}
+          @click=${() => this.setWheel(item.wheel)}>${item.detail}</button>`)}
       </div>` : nothing}
       <div class="wheel-stage" @click=${(event) => this.pickSector(event, group.labels.length)} @pointerdown=${(event) => this.wheelStart(event)}
-        @pointerup=${(event) => this.wheelEnd(event, groups.length)}
+        @pointerup=${(event) => this.wheelEnd(event, groups.map(({ wheel }) => wheel))}
         @pointercancel=${() => { this.swipe = null; }}
         @pointermove=${(event) => this.pointerTilt(event)}
         @pointerleave=${(event) => { if (event.pointerType === 'mouse') this.tilt(0, 0, 0); }}>
@@ -743,13 +798,16 @@ class LearnApp extends LitElement {
         <div class="wheel-switch" aria-label="Тип навыков" role="group">
           <div class="wheel-tabs">
             <button aria-pressed=${this.activeWheel === 0} @click=${() => this.setWheel(0)}>Софты</button>
-            ${this.person.hard.length ? html`<button aria-pressed=${this.activeWheel > 0} @click=${() => {
-              if (this.activeWheel === 0) this.setWheel(1);
+            ${groups.length > 1 ? html`<button aria-pressed=${this.activeWheel > 0} @click=${() => {
+              if (this.activeWheel === 0) this.setWheel(groups[1].wheel);
             }}>Харды</button>` : nothing}
           </div>
         </div>
       </div>
-      ${growth ? html`<button class="text-button growth-skip" @click=${() => this.finishGrowth(true)}>Пропустить анимацию</button>` : nothing}
+      ${growth ? html`
+        ${growth.to < growth.from ? html`<p class="skill-change" role="status">
+          ${group.labels[growth.index]}: ${growth.from}% → ${growth.to}%</p>` : nothing}
+        <button class="text-button growth-skip" @click=${() => this.finishGrowth(true)}>Пропустить анимацию</button>` : nothing}
       ${this.activeSector >= 0 ? keyed(this.activeSector, html`<div class="skill-readout" role="status">
         <span>${group.labels[this.activeSector]}</span>
         <strong>${group.levels[this.activeSector] === null ? 'Нет оценки' : group.levels[this.activeSector] + '%'}</strong>
@@ -774,15 +832,34 @@ class LearnApp extends LitElement {
     this.selectSector(Math.floor(angle / turn * count));
   }
 
-  shiftWheel(step, count) {
-    this.setWheel((this.activeWheel + step + count) % count);
+  shiftWheel(step, wheels) {
+    if (wheels.length < 2) return;
+    const current = Math.max(0, wheels.indexOf(this.activeWheel));
+    this.setWheel(wheels[(current + step + wheels.length) % wheels.length]);
   }
 
-  setWheel(index) {
+  async setWheel(index) {
+    if (index !== 0 && !this.person.hard[index - 1]?.skills.length) return;
     if (this.growth && index !== this.activeWheel) this.finishGrowth(true);
-    if (index !== this.activeWheel) this.wheelMotion += 1;
+    const changed = index !== this.activeWheel;
+    if (changed) this.wheelMotion += 1;
     this.activeWheel = index;
     this.activeSector = -1;
+    if (changed) {
+      await this.updateComplete;
+      this.animateFeedback(this.querySelector('.wheel-stage'));
+      this.animateFeedback(this.querySelector('.wheel-switch-row'));
+      this.animateFeedback(this.querySelector('.wheel-groups'));
+    }
+  }
+
+  animateFeedback(element, offset = 5) {
+    if (!element || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    element.getAnimations().filter((animation) => animation.id === 'feedback').forEach((animation) => animation.cancel());
+    element.animate([
+      { opacity: .35, transform: `translateY(${offset}px)` },
+      { opacity: 1, transform: 'none' },
+    ], { id: 'feedback', duration: 200, easing: 'ease-out' });
   }
 
   wheelStart(event) {
@@ -792,7 +869,7 @@ class LearnApp extends LitElement {
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
-  wheelEnd(event, count) {
+  wheelEnd(event, wheels) {
     if (!this.swipe) return;
     const dx = event.clientX - this.swipe.x;
     const dy = event.clientY - this.swipe.y;
@@ -803,7 +880,7 @@ class LearnApp extends LitElement {
       setTimeout(() => { this.ignoreWheelClick = false; }, 300);
     }
     if (touch && Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.25) {
-      this.shiftWheel(dx < 0 ? 1 : -1, count);
+      this.shiftWheel(dx < 0 ? 1 : -1, wheels);
     }
   }
 
@@ -922,16 +999,12 @@ class LearnApp extends LitElement {
     const status = this.assessmentStatus;
     const remaining = questions.length - this.answers.length;
     const question = questions[this.answers.length];
-    if (status === 'intro' || status === 'done') {
+    if (status === 'intro') {
       return html`<section class="assessment assessment-cover">
-        <div class="assessment-motion" aria-hidden="true">
-          <skill-celebration color="ink" ?orbit=${status === 'intro'} ?confetti=${status === 'done'}></skill-celebration>
-        </div>
-        <h1>${status === 'intro' ? 'Начнём с софтов?' : 'Готово, молодец!'}</h1>
-        ${status === 'intro' ? html`<p>30 ситуаций, примерно 10–15 минут. Выбирай вариант, который ближе к тому, как ты обычно поступаешь.</p>
-          <button class="primary" @click=${() => { this.assessmentStatus = 'questions'; }}>Начать</button>`
-          : html`<p>В разделе «Скиллы» появилась примерная оценка софтов по тесту. Дальше её сможет уточнять твой ментор.</p>
-          <button class="primary" @click=${() => this.go('home')}>Посмотреть навыки</button>`}
+        <div class="assessment-motion" aria-hidden="true"><skill-celebration color="ink" orbit></skill-celebration></div>
+        <h1>Начнём с софтов?</h1>
+        <p>30 ситуаций, примерно 10–15 минут. Выбирай вариант, который ближе к тому, как ты обычно поступаешь.</p>
+        <button class="primary" @click=${() => { this.assessmentStatus = 'questions'; }}>Начать</button>
       </section>`;
     }
     return html`<section class="assessment">
@@ -973,11 +1046,14 @@ class LearnApp extends LitElement {
     try {
       await this.mutate('assessment', { answers: this.answers });
       await this.refresh();
-      // Финальная сцена закрывает экран маской и на кадре закрытия переключает его на результат.
+      // Финальная сцена закрывает экран маской и на кадре закрытия переключает его на «Скиллы».
       if (this.personId === id && this.page === 'assessment') this.finale = true;
     } catch {
       await this.refresh().catch(() => {});
-      if (this.personId === id && this.page === 'assessment') this.assessmentStatus = this.person.soft ? 'done' : 'error';
+      if (this.personId === id && this.page === 'assessment') {
+        if (this.person.soft) this.finale = true;
+        else this.assessmentStatus = 'error';
+      }
     }
   }
 
@@ -1086,9 +1162,11 @@ class LearnApp extends LitElement {
 
   projectCard(project) {
     const folder = folders.some(([id]) => id === project.folder) ? project.folder : 'gel';
-    return html`<button class="project-folder" @click=${() => { this.selectedProject = project; this.go('project'); }}>
+    const unread = project.comments?.filter((comment) => this.commentUnread(comment)).length;
+    return html`<button class="project-folder" data-project-id=${project.id} @click=${() => { this.selectedProject = project; this.go('project'); }}>
       <span class="folder-art"><img src=${'/folders/' + folder + '.webp'} alt="" loading="lazy"></span>
       <strong>${project.name}</strong>
+      ${unread ? html`<small class="unread-comments">новые комментарии: ${unread}</small>` : nothing}
       ${project.description ? html`<small>${project.description}</small>` : nothing}
     </button>`;
   }
@@ -1110,7 +1188,8 @@ class LearnApp extends LitElement {
           </div>
         </section>
         <section class="project-comments"><h2>комментарии ментора</h2>
-          ${project.comments?.length ? html`<ul>${project.comments.map((comment) => html`<li><strong>${comment.author}</strong>
+          ${project.comments?.length ? html`<ul>${project.comments.map((comment) => html`<li><strong data-unread-comment=${this.commentUnread(comment) ? comment.id : nothing}>${comment.author}</strong>
+            ${this.commentUnread(comment) ? html`<span class="unread-comments">новый</span>` : nothing}
             <time datetime=${comment.createdAt}>${dayLabel.format(new Date(comment.createdAt))}</time>
             <p>${comment.text}</p></li>`)}</ul>` : html`<p class="empty">пока нет комментариев.</p>`}
           ${this.role === 'mentor' ? html`<form autocapitalize="none" @submit=${(event) => this.addProjectComment(event, project)}>
@@ -1127,8 +1206,10 @@ class LearnApp extends LitElement {
     if (clear) this.formError = '';
     await this.updateComplete;
     const dialog = this.querySelector('dialog');
-    if (!dialog.open) dialog.showModal();
-    else (dialog.querySelector('form input, form select') ?? dialog.querySelector('.dialog-top button'))?.focus();
+    if (!dialog.open) {
+      dialog.showModal();
+      if (modal.type === 'new-project') this.animateFeedback(dialog, 10);
+    } else (dialog.querySelector('form input, form select') ?? dialog.querySelector('.dialog-top button'))?.focus();
   }
 
   linkableTasks() {
@@ -1172,6 +1253,16 @@ class LearnApp extends LitElement {
     }
   }
 
+  async projectStep(step) {
+    this.formError = '';
+    this.modal = { ...this.modal, step };
+    await this.updateComplete;
+    this.querySelector('#dialog-title')?.focus();
+    const body = this.querySelector('.wizard-body');
+    if (body) body.scrollTop = 0;
+    this.animateFeedback(body);
+  }
+
   modalContent() {
     const { type, task, project, key, index, label, step } = this.modal;
     const title = {
@@ -1181,7 +1272,7 @@ class LearnApp extends LitElement {
     }[type];
     return html`
       ${type === 'new-project' && step > 1 ? html`<button class="text-button wizard-back" type="button"
-        @click=${() => { this.modal = { ...this.modal, step: step - 1 }; }}>назад</button>` : nothing}
+        @click=${() => this.projectStep(step - 1)}>назад</button>` : nothing}
       <div class="dialog-top"><h2 id="dialog-title" tabindex="-1">${title}</h2><button class="round" type="button" aria-label="Закрыть" ?disabled=${this.formBusy} @click=${() => this.querySelector('dialog').close()}>×</button></div>
       <form autocapitalize="none" @submit=${(event) => this.save(event)}>
           ${type === 'title' ? html`
@@ -1240,15 +1331,13 @@ class LearnApp extends LitElement {
     event.preventDefault();
     if (this.formBusy) return;
     const { type, task, project, key, index, step } = this.modal;
+    let createdProjectId;
     if (type === 'new-project' && step !== 3) {
       if (step === 1 && !event.currentTarget.elements.name.value.trim()) {
         this.formError = 'Укажи название проекта.';
         return;
       }
-      this.formError = '';
-      this.modal = { ...this.modal, step: step + 1 };
-      await this.updateComplete;
-      this.querySelector('#dialog-title')?.focus();
+      await this.projectStep(step + 1);
       return;
     }
     const data = new FormData(event.currentTarget);
@@ -1265,11 +1354,11 @@ class LearnApp extends LitElement {
         await this.mutate('photo', { mime: 'image/jpeg', contents: await encodePhoto(photo), caption: value('caption') });
         this.photoError = '';
       } else if (type === 'new-project') {
-        await this.mutate('project', {
+        ({ projectId: createdProjectId } = await this.mutate('project', {
           name: value('name'), description: value('description'), folder: value('folder'), links: Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => ({
             name: value('linkName' + index), url: value('linkUrl' + index),
           })),
-        });
+        }));
       } else if (type === 'import-calendar') {
         const file = data.get('calendarFile');
         if (!file?.size || file.size > 512 * 1024 || !/\.ics$/i.test(file.name)) {
@@ -1295,6 +1384,13 @@ class LearnApp extends LitElement {
       }
       await this.refresh();
       this.querySelector('dialog').close();
+      if (createdProjectId) {
+        await this.updateComplete;
+        const tile = this.querySelector(`[data-project-id="${CSS.escape(createdProjectId)}"]`);
+        tile?.focus({ preventScroll: true });
+        tile?.scrollIntoView({ block: 'nearest' });
+        this.animateFeedback(tile, 12);
+      }
     } catch (error) {
       this.formError = error.message;
     } finally {

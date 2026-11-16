@@ -893,3 +893,6 @@ dialog[data-project-wizard] form > .primary { flex: none; min-height: 44px; text
 .student-shell[data-page=home] .home-person { position: relative; }
 .skill-readout > span { min-width: 0; overflow-wrap: anywhere; }
 .skill-reveal { position: absolute; right: 10px; top: 50%; translate: 0 -50%; width: 56px; height: 56px; }
+
+.unread-comments { display: inline-block; padding: 2px 7px; border-radius: 10px; background: #fce5df; color: #802d22; font-size: 12px; }
+.skill-change { margin: 8px auto; color: #802d22; text-align: center; }

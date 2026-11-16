@@ -98,11 +98,12 @@ export class SkillChart extends LitElement {
       const visible = growth ? growth.from + (growth.to - growth.from) * (1 - (1 - rise) ** 3) : level;
       if (visible === null || visible <= 0) continue;
       const radius = maxRadius * visible / 100 * progress;
-      const facet = growth ? Math.min(rise * 3, 1) * Math.max(0, Math.min(1, (675 - frame) / 72)) : 0;
+      const facet = growth && growth.to > growth.from ? Math.min(rise * 3, 1) * Math.max(0, Math.min(1, (675 - frame) / 72)) : 0;
       const fill = context.createRadialGradient(center, center, 0, center, center, maxRadius);
       fill.addColorStop(0, purple ? '#ead4ff' : '#d9fa9f');
       fill.addColorStop(0.65, purple ? '#a66afa' : '#90ed49');
       fill.addColorStop(1, purple ? '#8b43ed' : '#72df2b');
+      const falling = growth && growth.to < growth.from && rise < 1;
       if (facet > 0) {
         context.save();
         context.translate(0, 6 * facet);
@@ -115,7 +116,7 @@ export class SkillChart extends LitElement {
         context.fill();
         context.restore();
       }
-      context.fillStyle = fill;
+      context.fillStyle = falling ? '#df8576' : fill;
       context.globalAlpha = this.active < 0 || this.active === index ? 1 : 0.38;
       context.beginPath();
       context.moveTo(center, center);

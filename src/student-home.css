@@ -628,7 +628,6 @@ mentor-note { display: block; }
 .project-folders .project-folder img { aspect-ratio: 153 / 111; }
 
 .home-summary { overflow: hidden; }
-.project-week h4 { margin: 12px 0 5px; font-size: 13px; font-weight: 400; color: #5c5961; }
 .project-comments { margin-top: 20px; }
 .project-comments h3 { margin: 0 0 8px; }
 .project-comments ul { display: grid; gap: 8px; padding: 0; list-style: none; }
@@ -673,19 +672,6 @@ mentor-note { display: block; }
 .project-folder :is(strong,small) { text-align: left; }
 .folder-art { position: relative; display: block; width: 100%; aspect-ratio: 153 / 111; }
 .project-folder .folder-art img { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; object-position: left bottom; }
-.folder-morph img { position: absolute; inset: 0; }
-.folder-morph img:not(:first-child) { opacity: 0; }
-@media (prefers-reduced-motion: no-preference) {
-  .folder-morph img { animation: folder-morph 8s linear infinite; transform-origin: left bottom; }
-  .folder-morph img:nth-child(2) { animation-delay: 2s; }
-  .folder-morph img:nth-child(3) { animation-delay: 4s; }
-  .folder-morph img:nth-child(4) { animation-delay: 6s; }
-}
-@keyframes folder-morph {
-  0% { opacity: 0; transform: scale(.97) skewX(-2deg); }
-  5%, 24% { opacity: 1; transform: none; }
-  30%, 100% { opacity: 0; transform: scale(.98) skewX(1deg); }
-}
 
 .profile-metal {
   width: min(100%, 370px);
@@ -901,3 +887,17 @@ learn-app .summary-avatar .avatar-image { display: inline-grid; width: 26px; hei
 .student-shell .home-inner-sheet { padding: 30px 10px 24px; background: #f6f6f6; }
 .student-shell .home-asset-heading.stretch-title { padding: 0; margin: 0 0 30px; line-height: 1; height: 40px; }
 .student-shell .student-home .home-chart-slot, .student-shell .student-home .home-inner-sheet .helper-panel { background: transparent; box-shadow: none; padding-top: 0; }
+
+.student-dock .dock-label { font-size: 15px; line-height: 1; color: #676767; }
+.student-dock .active .dock-label { color: #151515; }
+.student-shell[data-page=projects] .learner-section-title.stretch-title { scale: .82 1.5; transform-origin: center top; }
+.new-folder-art > span { position: absolute; inset: 50% auto auto 50%; translate: -50% -50%; font-size: 30px; color: #292929; }
+.project-folder .folder-art img, .folder-options img { mix-blend-mode: normal; }
+.project-page .project-week { border-left: 2px solid #dedede; padding-left: 12px; margin-block: 12px; }
+.project-week h3 { margin: 0 0 6px; font-size: 14px; color: #555; }
+dialog[data-project-wizard][open] { display: flex; flex-direction: column; box-sizing: border-box; max-height: min(760px, 92dvh); overflow: hidden; }
+dialog[data-project-wizard] .dialog-top, .wizard-back { flex: none; }
+.wizard-back { align-self: flex-start; padding-inline: 0; }
+dialog[data-project-wizard] form { display: flex; flex-direction: column; min-height: 0; }
+.wizard-body { overflow: auto; min-height: 0; overscroll-behavior: contain; padding: 2px; }
+dialog[data-project-wizard] form > .primary { flex: none; min-height: 44px; text-transform: lowercase; }

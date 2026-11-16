@@ -16,9 +16,9 @@ import './style.css';
 import './student-home.css';
 
 const sections = [
-  ['home', 'Скиллы', 'skills-tab.svg'],
-  ['calendar', 'Календарь', 'calendar-tab.svg'],
-  ['projects', 'Проекты', 'projects-tab.svg'],
+  ['home', 'скиллы'],
+  ['calendar', 'календарь'],
+  ['projects', 'проекты'],
 ];
 
 const shortSoftLabels = [
@@ -468,10 +468,10 @@ class LearnApp extends LitElement {
     return html`<div class="nav-material">
       <div class="mobile-nav">
         <nav class="nav" aria-label="Разделы">
-          ${sections.map(([id, title, asset]) => html`<button class=${this.page === id ? 'active' : ''}
+          ${sections.map(([id, title]) => html`<button class=${this.page === id ? 'active' : ''}
             aria-label=${title} aria-current=${this.page === id ? 'page' : nothing}
             @click=${() => { this.navMotion = id; this.go(id); }}>
-            <img src=${'/mobile-home/' + asset} alt="">
+            <span class="dock-label">${title}</span>
             ${this.page === id && this.navMotion === id ? html`<skill-celebration class="nav-burst" color="purple" compact></skill-celebration>` : nothing}
           </button>`)}
         </nav>
@@ -551,7 +551,7 @@ class LearnApp extends LitElement {
           @scene-end=${() => { this.assessmentPause = 0; }}></assessment-scene>`) : nothing}
       ${this.finale ? html`<assessment-scene class="assessment-finale" kind="finale"
         @scene-cover=${() => { this.assessmentStatus = 'done'; }} @scene-end=${() => { this.finale = false; }}></assessment-scene>` : nothing}
-      <dialog aria-labelledby="dialog-title" @cancel=${(event) => {
+      <dialog ?data-project-wizard=${this.modal?.type === 'new-project'} aria-labelledby="dialog-title" @cancel=${(event) => {
         if (this.formBusy) event.preventDefault();
       }} @close=${() => { if (this.modal?.preview) URL.revokeObjectURL(this.modal.preview); this.modal = null; }}>${this.modal ? this.modalContent() : nothing}</dialog>`;
   }
@@ -1067,9 +1067,8 @@ class LearnApp extends LitElement {
       <div class="project-folders">
         ${this.person.projects.map((project) => this.projectCard(project))}
         ${this.personId ? html`<button class="project-folder" @click=${() => this.open({ type: 'new-project', step: 1 })}>
-          <span class="folder-art folder-morph" aria-hidden="true">
-            <img src="/mobile-home/new-folder.svg" alt="">
-            ${['gel', 'fur', 'foil'].map((folder) => html`<img src=${'/folders/' + folder + '.webp'} alt="">`)}
+          <span class="folder-art new-folder-art" aria-hidden="true">
+            <img src="/mobile-home/new-folder.svg" alt=""><span>+</span>
           </span><strong>Новый проект</strong></button>` : nothing}
       </div>`;
   }
@@ -1091,7 +1090,7 @@ class LearnApp extends LitElement {
       <section class="project-page"><h1>${project.name}</h1>
         ${project.description ? html`<p>${project.description}</p>` : nothing}
         <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
-        <section class="project-plan"><h2>задачи проекта</h2>
+        <section class="project-plan"><h2>план обучения</h2>
           ${weeks.length ? weeks : html`<p class="empty">пока нет задач.</p>`}
           <div class="project-actions">
             <button class="primary" @click=${() => this.open({ type: 'create', project })}>+ задача</button>
@@ -1130,7 +1129,7 @@ class LearnApp extends LitElement {
       const monday = parseDate(start);
       const sunday = parseDate(shiftDate(start, 6));
       return html`<section class="project-week">
-        <h4>${dayLabel.formatRange(monday, sunday)}</h4>
+        <h3>${dayLabel.formatRange(monday, sunday)}</h3>
         ${tasks.map((task) => html`<button class="project-task" @click=${() => {
           this.selectedProject = project;
           this.date = task.date;
@@ -1170,6 +1169,8 @@ class LearnApp extends LitElement {
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
     }[type];
     return html`
+      ${type === 'new-project' && step > 1 ? html`<button class="text-button wizard-back" type="button"
+        @click=${() => { this.modal = { ...this.modal, step: step - 1 }; }}>назад</button>` : nothing}
       <div class="dialog-top"><h2 id="dialog-title" tabindex="-1">${title}</h2><button class="round" type="button" aria-label="Закрыть" ?disabled=${this.formBusy} @click=${() => this.querySelector('dialog').close()}>×</button></div>
       <form autocapitalize="none" @submit=${(event) => this.save(event)}>
           ${type === 'title' ? html`
@@ -1177,7 +1178,7 @@ class LearnApp extends LitElement {
           : type === 'hard' ? html`
             <label>Название<input name="name" required maxlength="70"></label>
             <label>До 10 навыков через запятую<input name="skills" required maxlength="300" placeholder="Git, Docker, LLM"></label>`
-          : type === 'new-project' ? html`
+          : type === 'new-project' ? html`<div class="wizard-body">
             <fieldset class="project-step" ?hidden=${step !== 1}>
               <label>Название<input name="name" required maxlength="80" placeholder="название проекта"></label>
             </fieldset>
@@ -1196,8 +1197,7 @@ class LearnApp extends LitElement {
                 <label><input type="radio" name="folder" value=${id} ?checked=${id === 'gel'}>
                   <img src=${step === 3 ? '/folders/' + id + '.webp' : nothing} alt=""><span>${name}</span></label>`)}</div>
             </fieldset>
-            ${step > 1 ? html`<button class="text-button project-back" type="button"
-              @click=${() => { this.modal = { ...this.modal, step: step - 1 }; }}>Назад</button>` : nothing}`
+            </div>`
           : type === 'link-existing' ? html`
             <label>Задача<select name="taskId" aria-label="Задача" required>
               ${this.linkableTasks().map((item) => html`<option value=${item.id}>${item.title}, ${dayLabel.format(parseDate(item.date))}</option>`)}

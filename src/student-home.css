@@ -835,7 +835,7 @@ learn-app .memories figcaption { display: flex; flex-wrap: wrap; gap: 2px 8px; a
 .cal-toggle button { min-height: 56px; border: 0; border-radius: 999px; background: transparent; color: #111; font: inherit; font-size: 22px; font-weight: 600; cursor: pointer; }
 .cal-toggle button[aria-selected=true] { background: #e44d32; color: #fff; }
 .cal-list .agenda { display: grid; gap: 6px; }
-.cal-add { display: block; margin: 10px auto 0; }
+.calendar-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 learn-app .memories { padding: 22px 16px; border-radius: 34px; background: #f8f8f8; }
 .skill-percent { display: inline-flex; align-items: center; gap: 2px; flex: none; font: 14px 'Martian Mono', monospace; }
 .skill-percent input { width: 58px; min-height: 36px; padding: 0 6px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font: inherit; text-align: right; }

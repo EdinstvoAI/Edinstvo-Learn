@@ -49,6 +49,7 @@ class LearnApp extends LitElement {
     tasks: { state: true },
     date: { state: true },
     calendarFilter: { state: true },
+    calendarImportStatus: { state: true },
     monthView: { state: true },
     selections: { state: true },
     modal: { state: true },
@@ -253,6 +254,7 @@ class LearnApp extends LitElement {
 
   selectPerson(id) {
     this.personId = id;
+    this.calendarImportStatus = '';
     this.selections = {};
     this.celebration = null;
     this.activeWheel = 0;
@@ -1058,7 +1060,11 @@ class LearnApp extends LitElement {
           ${filteredTasks.length
             ? html`<div class="agenda">${filteredTasks.map((task) => this.calendarTask(task))}</div>`
             : html`<p class="agenda-empty">${this.calendarFilter === 'new' ? 'за неделю новых задач нет.' : 'на этот день задач нет.'}</p>`}
-          ${this.personId ? html`<button class="text-button cal-add" @click=${() => this.open({ type: 'create' })}>+ задача</button>` : nothing}
+          ${this.personId ? html`<div class="calendar-actions">
+            <button class="text-button" @click=${() => this.open({ type: 'create' })}>+ задача</button>
+            ${!learner ? html`<button class="text-button" @click=${() => this.open({ type: 'import-calendar' })}>импорт .ics</button>` : nothing}
+          </div>` : nothing}
+          ${!learner && this.calendarImportStatus ? html`<p role="status">${this.calendarImportStatus}</p>` : nothing}
         </section>
       </div>`;
   }
@@ -1072,7 +1078,7 @@ class LearnApp extends LitElement {
       ? `${dayLabel.format(parseDate(starts))} до ${dayLabel.format(parseDate(ends))}`
       : task.endTime && task.endTime !== task.time ? `${task.time} — ${task.endTime}` : '';
     return html`<div class="agenda-row">
-      <time class="agenda-time" datetime=${starts + 'T' + task.time}>${range || task.time}</time>
+      <time class="agenda-time" datetime=${task.allDay ? starts : starts + 'T' + task.time}>${task.allDay && starts === ends ? 'весь день' : range || task.time}</time>
       <div><strong>${task.title}</strong>
         ${project ? html`<button class="task-project" @click=${() => { this.selectedProject = project; this.go('project'); }}>${project.name}</button>` : nothing}
         <p>${task.done ? 'Завершено' : editable ? 'Можно перенести' : 'Дата закреплена'}</p>
@@ -1195,7 +1201,7 @@ class LearnApp extends LitElement {
     const { type, task, project, key, index, label, step } = this.modal;
     const title = {
       hard: 'Новый круг хардов', title: 'Роль на карточке', create: 'Новая задача', move: 'Перенести задачу',
-      photo: 'Новое воспоминание',
+      photo: 'Новое воспоминание', 'import-calendar': 'Импорт календаря',
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
     }[type];
     return html`
@@ -1232,6 +1238,9 @@ class LearnApp extends LitElement {
             <label>Задача<select name="taskId" aria-label="Задача" required>
               ${this.linkableTasks().map((item) => html`<option value=${item.id}>${item.title}, ${dayLabel.format(parseDate(item.date))}</option>`)}
             </select></label>`
+          : type === 'import-calendar' ? html`
+            <p>События из файла появятся в календаре менти ${this.person.name}.</p>
+            <label>Файл .ics<input name="calendarFile" type="file" accept=".ics,text/calendar" required></label>`
           : type === 'photo' ? html`
             ${this.modal.preview ? html`<img class="photo-preview" src=${this.modal.preview} alt="">` : nothing}
             <label>Описание<input name="caption" maxlength="120" placeholder="над чем работаешь?"></label>`
@@ -1239,8 +1248,8 @@ class LearnApp extends LitElement {
             ${type === 'create' ? html`<label>Задача<input name="title" required maxlength="100"></label>` : html`<p>${task.title}</p>`}
             <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.date}></label>
             <label>конец<input type="date" name="endDate" required .value=${task?.endDate ?? task?.date ?? this.date}></label></div>
-            <div class="task-range"><label>с<input type="time" name="time" required .value=${task?.time ?? '18:00'}></label>
-            <label>до<input type="time" name="endTime" required .value=${task?.endTime ?? task?.time ?? '19:00'}></label></div>
+            ${task?.allDay ? html`<p>Событие на весь день</p>` : html`<div class="task-range"><label>с<input type="time" name="time" required .value=${task?.time ?? '18:00'}></label>
+            <label>до<input type="time" name="endTime" required .value=${task?.endTime ?? task?.time ?? '19:00'}></label></div>`}
             ${this.person.projects.length ? html`<label>Проект<select name="projectId" aria-label="Проект">
               <option value="">Без проекта</option>
               ${this.person.projects.map((item) => html`<option value=${item.id}
@@ -1248,7 +1257,7 @@ class LearnApp extends LitElement {
             </select></label>` : nothing}
             ${type === 'create' && this.role === 'mentor' ? html`<label class="check"><input type="checkbox" name="movable"> Менти может перенести задачу</label>` : nothing}`}
           ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
-          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : 'Сохранить'}</button>
+          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : type === 'import-calendar' ? 'Импортировать' : 'Сохранить'}</button>
         </form>`;
   }
 
@@ -1286,13 +1295,24 @@ class LearnApp extends LitElement {
             name: value('linkName' + index), url: value('linkUrl' + index),
           })),
         });
+      } else if (type === 'import-calendar') {
+        const file = data.get('calendarFile');
+        if (!file?.size || file.size > 512 * 1024 || !/\.ics$/i.test(file.name)) {
+          throw new Error('Выбери файл .ics до 512 КБ.');
+        }
+        const result = await this.mutate('import-calendar', { ics: await file.text() });
+        this.calendarImportStatus = `добавлено: ${result.imported}. уже в календаре: ${result.duplicates}.`;
+        if (result.firstDate) {
+          this.date = result.firstDate;
+          this.calendarFilter = 'today';
+        }
       } else if (type === 'link-existing') {
         await this.mutate('link-task', { id: value('taskId'), projectId: project.id });
       } else {
         const startDate = value('startDate');
         const endDate = value('endDate');
-        const time = value('time');
-        const endTime = value('endTime');
+        const time = task?.allDay ? '00:00' : value('time');
+        const endTime = task?.allDay ? '23:59' : value('endTime');
         await this.mutate(type === 'create' ? 'create-task' : 'move-task', {
           title: value('title'), id: task?.id, date: startDate, startDate, endDate, time, endTime, projectId: value('projectId'), movable: data.has('movable'),
         });

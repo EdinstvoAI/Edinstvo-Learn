@@ -811,6 +811,24 @@ learn-app .memories figcaption { display: flex; flex-wrap: wrap; gap: 2px 8px; a
 .cal-week strong { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #111; color: #fff; font-size: 18px; font-weight: 500; position: relative; }
 .cal-week button[aria-pressed=true] strong { background: #e44d32; }
 .cal-week .is-busy strong::after { content: ''; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .75; }
+.cal-period-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.cal-period { display: inline-flex; flex: none; padding: 2px; border-radius: 99px; background: #fff; }
+.cal-period button { min-height: 40px; border: 0; padding: 0 8px; border-radius: 99px; background: transparent; font-size: 12px; }
+.cal-period button[aria-pressed=true] { background: #191919; color: #fff; }
+.cal-week > span { text-align: center; font-size: 13px; }
+.cal-days { margin-top: 7px; row-gap: 5px; }
+.cal-days button { min-height: 38px; min-width: 0; }
+.cal-days strong { width: min(100%, 42px); height: auto; aspect-ratio: 1; margin: auto; }
+.cal-days .is-outside[aria-pressed=false] strong { color: #676767; background: #eaeaea; }
+.cal-days button[aria-current=date][aria-pressed=false] strong { box-shadow: inset 0 0 0 2px #e44d32; }
+.cal-selected-day { margin: 0 0 10px; font-size: 19px; }
+@media (max-width: 360px) {
+  .cal-period-head .cal-month { font-size: 32px; }
+  .cal-period button { padding-inline: 6px; }
+}
+.cal-period-head:has(.cal-year) .cal-month { margin-bottom: 5px; }
+.cal-year { display: block; margin-bottom: 8px; color: #666; font-size: 12px; }
+.cal-days[data-month] button:not([aria-pressed=true], .is-outside) strong { background: #fff; color: #181818; }
 .cal-nav { display: flex; justify-content: space-between; margin-top: 10px; }
 .cal-nav .text-button { min-height: 32px; padding: 0; color: #888; font-size: 12px; }
 .cal-toggle { display: grid; grid-template-columns: 1fr 1fr; padding: 0; margin-bottom: 14px; border-radius: 999px; background: #fff; }

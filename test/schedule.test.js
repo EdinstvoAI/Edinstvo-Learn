@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  assessmentPauses, filterTasks, formatDate, parseDate, shiftDate, shuffledAnswers, taskOnDay, tasksByWeek, upcomingTask, weekStart,
+  assessmentPauses, filterTasks, formatDate, monthGrid, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, tasksByWeek, upcomingTask, weekStart,
 } from '../src/schedule.js';
 import { questions } from '../src/questions.js';
 
@@ -91,4 +91,14 @@ test('fitSize shrinks the long side to the limit and keeps proportions', async (
   assert.deepEqual(fitSize(3024, 4032), [1200, 1600]);
   assert.deepEqual(fitSize(800, 600), [800, 600]);
   assert.deepEqual(fitSize(10000, 10), [1600, 2]);
+});
+
+test('month view contains complete Monday-first weeks and clamps month navigation', () => {
+  const november = monthGrid('2026-11-16');
+  assert.equal(november[0], '2026-10-26');
+  assert.equal(november.at(-1), '2026-12-06');
+  assert.equal(november.length, 42);
+  assert.equal(monthGrid('2027-02-07').length, 28);
+  assert.equal(shiftMonth('2028-01-31', 1), '2028-02-29');
+  assert.equal(shiftMonth('2026-01-31', -1), '2025-12-31');
 });

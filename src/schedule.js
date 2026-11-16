@@ -20,6 +20,27 @@ export function shiftDate(date, days) {
   return formatDate(next);
 }
 
+export function shiftMonth(day, months) {
+  const date = parseDate(day);
+  const targetDay = date.getUTCDate();
+  date.setUTCMonth(date.getUTCMonth() + months, 1);
+  const lastDay = parseDate(formatDate(date));
+  lastDay.setUTCMonth(lastDay.getUTCMonth() + 1, 0);
+  date.setUTCDate(Math.min(targetDay, lastDay.getUTCDate()));
+  return formatDate(date);
+}
+
+export function monthGrid(day) {
+  const first = day.slice(0, 7) + '-01';
+  const start = weekStart(first);
+  const next = shiftMonth(first, 1);
+  const days = [];
+  for (let date = start; date < next || days.length % 7; date = shiftDate(date, 1)) {
+    days.push(date);
+  }
+  return days;
+}
+
 const newTaskAge = 7 * 24 * 60 * 60 * 1000;
 
 // Фильтры календаря: задачи выбранного дня, созданные за последнюю неделю или все.

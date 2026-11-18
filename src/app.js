@@ -11,7 +11,7 @@ import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
 import { compressPhoto, encodePhoto, request, telegramData } from './api.js';
-import { assessmentPauses, filterTasks, formatDate, monthGrid, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, tasksByWeek, weekStart } from './schedule.js';
+import { assessmentPauses, filterTasks, formatDate, monthGrid, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, upcomingTask, weekStart } from './schedule.js';
 import './style.css';
 import './student-home.css';
 
@@ -69,6 +69,7 @@ class LearnApp extends LitElement {
     navMotion: { state: true },
     wheelMotion: { state: true },
     selectedProject: { state: true },
+    projectDay: { state: true },
     mentorStep: { state: true },
   };
 
@@ -483,6 +484,7 @@ class LearnApp extends LitElement {
       if (page === 'students') void this.refresh().catch(() => {});
       return;
     }
+    if (page === 'project') this.projectDay = null;
     const leavingSkills = this.page === 'home' && ['calendar', 'projects', 'profile'].includes(page);
     const summary = leavingSkills && this.querySelector('.home-summary');
     if (summary && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -1120,8 +1122,8 @@ class LearnApp extends LitElement {
       </div>`;
   }
 
-  calendarTask(task) {
-    const project = this.person.projects.find((item) => item.id === task.projectId);
+  calendarTask(task, showProject = true) {
+    const project = showProject && this.person.projects.find((item) => item.id === task.projectId);
     const editable = this.role === 'mentor' || task.movable;
     const starts = task.startDate ?? task.date;
     const ends = task.endDate ?? task.date;
@@ -1174,15 +1176,14 @@ class LearnApp extends LitElement {
   projectPage() {
     const project = this.person.projects.find((item) => item.id === this.selectedProject?.id);
     if (!project) return this.projects();
-    const weeks = this.projectWeeks(project);
     return html`<button class="text-button project-back" @click=${() => this.go('projects')}>← проекты</button>
       <section class="project-page"><h1>${project.name}</h1>
         ${project.description ? html`<p>${project.description}</p>` : nothing}
         <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
         <section class="project-plan"><h2>план обучения</h2>
-          ${weeks.length ? weeks : html`<p class="empty">пока нет задач.</p>`}
+          ${this.projectCalendar(project)}
           <div class="project-actions">
-            <button class="primary" @click=${() => this.open({ type: 'create', project })}>+ задача</button>
+            <button class="primary" @click=${() => this.open({ type: 'create', project, date: this.projectDay ?? today() })}>+ задача</button>
             ${this.linkableTasks().length ? html`<button class="text-button"
               @click=${() => this.open({ type: 'link-existing', project })}>привязать из календаря</button>` : nothing}
           </div>
@@ -1216,22 +1217,39 @@ class LearnApp extends LitElement {
     return this.personTasks.filter((task) => !task.projectId && (this.role === 'mentor' || task.movable));
   }
 
-  projectWeeks(project) {
-    return tasksByWeek(this.personTasks.filter((item) => item.projectId === project.id)).map(([start, tasks]) => {
-      const monday = parseDate(start);
-      const sunday = parseDate(shiftDate(start, 6));
-      return html`<section class="project-week">
-        <h3>${dayLabel.formatRange(monday, sunday)}</h3>
-        ${tasks.map((task) => html`<button class="project-task" @click=${() => {
-          this.selectedProject = project;
-          this.date = task.date;
-          this.calendarFilter = 'today';
-          this.go('calendar');
-        }}><strong>${task.title}${task.done ? ' ✓' : ''}</strong>
-          <time datetime=${task.date + 'T' + task.time}>${dayLabel.format(parseDate(task.date))}, ${task.time}</time>
-        </button>`)}
-      </section>`;
-    });
+  projectCalendar(project) {
+    const currentDay = today();
+    const now = new Date().toTimeString().slice(0, 5);
+    const tasks = filterTasks(this.personTasks.filter((task) => task.projectId === project.id), 'all', currentDay);
+    const next = upcomingTask(tasks, currentDay, now);
+    const nextDay = next ? (taskOnDay(next, currentDay) ? currentDay : next.startDate ?? next.date) : null;
+    const selected = this.projectDay ?? nextDay ?? currentDay;
+    const start = weekStart(selected);
+    const days = weekDays.map((label, index) => ({ label, day: shiftDate(start, index) }));
+    const dayTasks = filterTasks(tasks, 'today', selected);
+    return html`<details class="project-calendar">
+      <summary><strong>календарь задач</strong>
+        <span>${next ? 'ближайшая: ' + next.title + ', ' + dayLabel.format(parseDate(nextDay)) : 'нет ближайших задач'}</span>
+      </summary>
+      <div class="cal-nav">
+        <button class="text-button" @click=${() => { this.projectDay = shiftDate(selected, -7); }}>← предыдущая</button>
+        <button class="text-button" @click=${() => { this.projectDay = shiftDate(selected, 7); }}>следующая →</button>
+      </div>
+      <div class="cal-week cal-days" aria-label="Дни недели проекта">
+        ${days.map(({ label, day }) => {
+          const date = parseDate(day);
+          const busy = tasks.some((task) => taskOnDay(task, day));
+          return html`<button aria-label=${longDate.format(date) + (busy ? ', есть задачи' : '')}
+            aria-pressed=${day === selected} aria-current=${day === currentDay ? 'date' : nothing}
+            class=${busy ? 'is-busy' : ''} @click=${() => { this.projectDay = day; }}>
+            <small aria-hidden="true">${label}</small><strong>${date.getUTCDate()}</strong>
+          </button>`;
+        })}
+      </div>
+      <h3>${longDate.format(parseDate(selected))}</h3>
+      ${dayTasks.length ? html`<div class="agenda">${dayTasks.map((task) => this.calendarTask(task, false))}</div>`
+        : html`<p class="empty">на этот день задач нет.</p>`}
+    </details>`;
   }
 
   async addProjectComment(event, project) {
@@ -1312,8 +1330,8 @@ class LearnApp extends LitElement {
             <label>Описание<input name="caption" maxlength="120" placeholder="над чем работаешь?"></label>`
           : html`
             ${type === 'create' ? html`<label>Задача<input name="title" required maxlength="100"></label>` : html`<p>${task.title}</p>`}
-            <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.date}></label>
-            <label>конец<input type="date" name="endDate" required .value=${task?.endDate ?? task?.date ?? this.date}></label></div>
+            <div class="task-range"><label>начало<input type="date" name="startDate" required .value=${task?.startDate ?? task?.date ?? this.modal.date ?? this.date}></label>
+            <label>конец<input type="date" name="endDate" required .value=${task?.endDate ?? task?.date ?? this.modal.date ?? this.date}></label></div>
             ${task?.allDay ? html`<p>Событие на весь день</p>` : html`<div class="task-range"><label>с<input type="time" name="time" required .value=${task?.time ?? '18:00'}></label>
             <label>до<input type="time" name="endTime" required .value=${task?.endTime ?? task?.time ?? '19:00'}></label></div>`}
             ${this.person.projects.length ? html`<label>Проект<select name="projectId" aria-label="Проект">

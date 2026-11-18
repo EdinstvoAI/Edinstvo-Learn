@@ -893,8 +893,12 @@ learn-app .summary-avatar .avatar-image { display: inline-grid; width: 26px; hei
 }
 .new-folder-art > span { position: absolute; inset: 50% auto auto 50%; translate: -50% -50%; font-size: 30px; color: #292929; }
 .project-folder .folder-art img, .folder-options img { mix-blend-mode: normal; }
-.project-page .project-week { border-left: 2px solid #dedede; padding-left: 12px; margin-block: 12px; }
-.project-week h3 { margin: 0 0 6px; font-size: 14px; color: #555; }
+.project-calendar { padding: 12px; margin-block: 12px; border-radius: 16px; background: #f9f9f9; }
+.project-calendar summary { min-height: 44px; cursor: pointer; }
+.project-calendar summary span { display: block; margin-top: 4px; color: #666; overflow-wrap: anywhere; }
+.project-calendar .cal-nav button, .project-calendar .cal-days button { min-height: 44px; }
+.project-calendar .cal-days button { gap: 4px; }
+.project-calendar h3 { margin-block: 12px 6px; }
 dialog[data-project-wizard][open] { display: flex; flex-direction: column; box-sizing: border-box; max-height: min(760px, 92dvh); overflow: hidden; }
 dialog[data-project-wizard] .dialog-top, .wizard-back { flex: none; }
 .wizard-back { align-self: flex-start; padding-inline: 0; }

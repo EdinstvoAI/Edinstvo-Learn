@@ -24,6 +24,35 @@ const fill = (color, opacity = 100) => ({ ty: 'fl', c: property([...color, 1]), 
 const group = (...items) => ({ ty: 'gr', it: [...items,
   { ty: 'tr', p: property([0, 0]), a: property([0, 0]), s: property([100, 100]), r: property(0), o: property(100) }] });
 
+export const decreaseSettleFrame = 42;
+
+export function skillDecreaseScene({ index, from, to }, sectors) {
+  const size = 420;
+  const center = size / 2;
+  const step = 2 * Math.PI / sectors;
+  const middle = -Math.PI / 2 + (index + .5) * step;
+  const point = (angle, percent) => {
+    const radius = 188 * percent / 100;
+    return [center + Math.cos(angle) * radius, center + Math.sin(angle) * radius, 0];
+  };
+  const palette = [[.94, .53, .47], [.99, .71, .63], [.91, .49, .61]];
+  const layers = Array.from({ length: 12 }, (_, i) => {
+    const angle = middle + ((i + .5) / 12 - .5) * step * .8;
+    const start = 2 + (i % 4) * 3;
+    const end = decreaseSettleFrame + 4 + (i % 3) * 3;
+    const diameter = 4 + (i % 4) * 2.5;
+    return layer(i + 1, start, end + 1, {
+      p: keyframes([[start, point(angle, from)], [end, point(middle + (angle - middle) * .25, to)]], easeInOut),
+      s: keyframes([[start, [65, 65, 100]], [start + 9, [112, 112, 100]], [end, [20, 20, 100]]]),
+      o: keyframes([[start, [0]], [start + 5, [92]], [end - 10, [66]], [end, [0]]]),
+    }, [
+      group({ ty: 'el', p: property([-diameter * .2, -diameter * .2]), s: property([diameter * .38, diameter * .38]) }, fill([1, 1, 1], 72)),
+      group({ ty: 'el', p: property([0, 0]), s: property([diameter, diameter]) }, fill(palette[i % palette.length])),
+    ]);
+  });
+  return { v: '5.13.0', fr: 60, ip: 0, op: 56, w: size, h: size, assets: [], layers };
+}
+
 // Глянцевый кубик: тёмная боковая грань со сдвигом даёт толщину, лицевая грань с радиальным градиентом
 // и бликом даёт объём. Размер 100 px, масштаб задаёт слой.
 function cube(tone = 0) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { burstScene, finaleCover, finaleScene } from '../src/lottie-scenes.js';
+import { burstScene, finaleCover, finaleScene, skillDecreaseScene } from '../src/lottie-scenes.js';
 
 const library = JSON.parse(readFileSync(new URL('../public/motion/assessment-objects.json', import.meta.url)));
 const ends = (property) => property.a ? [property.k[0].s, property.k.at(-1).s] : [property.k, property.k];
@@ -61,5 +61,21 @@ test('extracted glass objects stay static', () => {
     const object = library.objects[kind];
     assert.ok(object.shapes.length > 0 && object.size > 0 && object.anchor.length === 2, kind);
     assert.ok(!JSON.stringify(object.shapes).includes('"a":1'), kind + ' is static');
+  }
+});
+
+test('decrease particles move from the old score to the new score in the affected sector', () => {
+  for (const [sectors, index, to] of [[10, 4, 18], [2, 1, 0], [1, 0, 55]]) {
+    const scene = skillDecreaseScene({ index, from: 89, to }, sectors);
+    assertValid(scene);
+    const radius = ([x, y]) => Math.hypot(x - 210, y - 210);
+    const middle = -Math.PI / 2 + (index + .5) * 2 * Math.PI / sectors;
+    for (const layer of scene.layers) {
+      const [start, end] = ends(layer.ks.p);
+      assert.ok(Math.abs(radius(start) - 188 * .89) < .001);
+      assert.ok(Math.abs(radius(end) - 188 * to / 100) < .001);
+      const angle = Math.atan2(start[1] - 210, start[0] - 210);
+      assert.ok(Math.acos(Math.cos(angle - middle)) < Math.PI / sectors);
+    }
   }
 });

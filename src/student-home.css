@@ -526,6 +526,33 @@ mentor-note { display: block; }
 .assessment-segments { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 3px; margin: 10px 0 22px; }
 .assessment-segments span { height: 5px; border-radius: 99px; background: #fff; box-shadow: inset 0 0 0 1px #dedde1; }
 .assessment-segments span.is-filled { background: #202024; box-shadow: none; }
+.student-shell[data-page=assessment] .assessment-steps { display: grid; gap: 8px; padding: 0; background: transparent; }
+.assessment-steps .assessment-block { min-width: 0; padding: 12px 16px; border-radius: 20px; background: #f7f7f7; }
+.assessment-steps .assessment-progress { min-height: 44px; }
+.assessment-steps .assessment-progress button { min-height: 44px; }
+.assessment-steps .assessment-question h2 { margin: 0; overflow-wrap: anywhere; }
+.assessment-steps .assessment-options { display: grid; gap: 12px; }
+.assessment-steps .answer-list { margin: 0; }
+.assessment-steps .answer-list button { min-height: 44px; }
+.assessment-steps .assessment-segments { position: relative; margin: 4px 0; }
+.assessment-beam {
+  position: absolute; inset: 0 auto 0 0;
+  width: calc((100% + 3px) * var(--answered) / 30 - 3px);
+  overflow: hidden; border-radius: 99px; pointer-events: none;
+}
+.assessment-beam::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 30%, #cfc5ff 58%, transparent 85%);
+  animation: assessment-beam-pass .55s ease-out both;
+}
+@keyframes assessment-beam-pass {
+  from { transform: translateX(-100%); opacity: 0; }
+  25% { opacity: .9; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assessment-beam { display: none; }
+}
 .assessment .encouragement { display: flex; min-height: 64px; position: relative; background: #1c1c1c; color: #fff; }
 .assessment .encouragement p { margin: 0; color: inherit; }
 .assessment .encouragement img { width: 30px; height: auto; }

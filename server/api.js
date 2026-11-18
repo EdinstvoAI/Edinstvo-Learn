@@ -293,12 +293,20 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         project.comments = [...(project.comments ?? []), {
           id: randomUUID(), text, author: actor.name, createdAt: new Date().toISOString(),
         }];
-      } else if (action === 'project') {
+      } else if (action === 'delete-project') {
+        allowed(profile.projects?.some((project) => project.id === data.projectId));
+        await client.query('UPDATE tasks SET project_id = NULL WHERE person = $1 AND project_id = $2', [person, data.projectId]);
+        profile.projects = profile.projects.filter((project) => project.id !== data.projectId);
+      } else if (action === 'project' || action === 'edit-project') {
+        const existing = action === 'edit-project' ? profile.projects?.find((project) => project.id === data.projectId) : null;
+        if (action === 'edit-project') allowed(existing);
         const name = lowerText(data.name, 80);
         requireInput(name && (!data.folder || folderNames.has(data.folder)));
-        const project = { id: randomUUID(), name, folder: data.folder || 'gel',
+        const project = { ...existing, id: existing?.id ?? randomUUID(), name, folder: data.folder || 'gel',
           description: lowerText(data.description, 160), sources: projectSources(data) };
-        profile.projects = [...(profile.projects ?? []), project];
+        profile.projects = action === 'edit-project'
+          ? profile.projects.map((item) => item.id === project.id ? project : item)
+          : [...(profile.projects ?? []), project];
         await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
         return { projectId: project.id };
       } else if (action === 'photo') {

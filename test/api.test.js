@@ -9,11 +9,14 @@ const mentee = { id: 'mentee-1', name: 'Аня', role: 'mentee', pending: false 
 const cookie = 'learn_session=' + 'a'.repeat(64);
 
 // Подмена PostgreSQL: сессия отдаёт заданного актёра, остальные запросы пустые.
-function fakeDatabase(actor) {
+function fakeDatabase(actor, profile) {
   const queries = [];
   const client = {
     async query(sql, values) {
       queries.push({ sql, values });
+      if (profile && sql.includes('SELECT profile, telegram_id') && values[0] === projectOwner && values[1] === actor.id) {
+        return { rows: [{ profile: structuredClone(profile) }] };
+      }
       return { rows: actor && sql.includes('FROM sessions') ? [actor] : [], rowCount: 0 };
     },
   };
@@ -36,6 +39,44 @@ async function call(api, { method = 'GET', url, headers = {}, body }) {
 
 const post = (url, body, headers = {}) => ({
   method: 'POST', url, body: JSON.stringify(body), headers: { 'content-type': 'application/json', cookie, ...headers },
+});
+
+const projectOwner = '3f2b8c1e-7a4d-4e9b-9c1f-0a1b2c3d4e5f';
+const projectId = '7968c571-268d-4e27-8717-3a85d206aa61';
+const projectRoute = (action) => '/people/' + projectOwner + '/' + action;
+
+test('project edits preserve its identity and comments', async () => {
+  const comments = [{ text: 'review' }];
+  const db = fakeDatabase(mentor, { projects: [{ id: projectId, name: 'old', comments }] });
+  const result = await call(makeApi({}, db), post(projectRoute('edit-project'), {
+    projectId, name: 'NEW', description: 'desc', folder: 'gel', links: [{ name: 'repo', url: 'https://example.com/A' }],
+  }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(db.queries.at(-1).values[0].projects, [{
+    id: projectId, name: 'new', description: 'desc', folder: 'gel', comments,
+    sources: [{ type: 'repo', url: 'https://example.com/A' }],
+  }]);
+});
+
+test('project deletion detaches only that project’s tasks and keeps other projects', async () => {
+  const other = { id: 'another-project' };
+  const db = fakeDatabase(mentee, { projects: [{ id: projectId }, other] });
+  const result = await call(makeApi({}, db), post(projectRoute('delete-project'), { projectId }));
+  assert.equal(result.status, 200);
+  const detach = db.queries.find(({ sql }) => sql.startsWith('UPDATE tasks'));
+  assert.match(detach.sql, /SET project_id = NULL WHERE person = \$1 AND project_id = \$2/);
+  assert.deepEqual(detach.values, [projectOwner, projectId]);
+  assert.deepEqual(db.queries.at(-1).values[0].projects, [other]);
+});
+
+test('project changes reject an unknown project and an inaccessible profile', async () => {
+  for (const profile of [{ projects: [] }, undefined]) {
+    const db = fakeDatabase(mentee, profile);
+    for (const action of ['edit-project', 'delete-project']) {
+      assert.equal((await call(makeApi({}, db), post(projectRoute(action), { projectId, name: 'new' }))).status, 403);
+    }
+    assert.ok(!db.queries.some(({ sql }) => sql.startsWith('UPDATE')));
+  }
 });
 
 test('reports a missing database', async () => {

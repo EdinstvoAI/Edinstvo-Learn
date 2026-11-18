@@ -1179,6 +1179,10 @@ class LearnApp extends LitElement {
       <section class="project-page"><h1>${project.name}</h1>
         ${project.description ? html`<p>${project.description}</p>` : nothing}
         <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
+        <div class="project-actions">
+          <button class="text-button" @click=${() => this.open({ type: 'edit-project', project })}>редактировать</button>
+          <button class="text-button" @click=${() => this.open({ type: 'delete-project', project })}>удалить проект</button>
+        </div>
         <section class="project-plan"><h2>план обучения</h2>
           ${weeks.length ? weeks : html`<p class="empty">пока нет задач.</p>`}
           <div class="project-actions">
@@ -1269,6 +1273,7 @@ class LearnApp extends LitElement {
       hard: 'Новый круг хардов', title: 'Роль на карточке', create: 'Новая задача', move: 'Перенести задачу',
       photo: 'Новое воспоминание', 'import-calendar': 'Импорт календаря',
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
+      'edit-project': 'Редактировать проект', 'delete-project': 'Удалить проект?',
     }[type];
     return html`
       ${type === 'new-project' && step > 1 ? html`<button class="text-button wizard-back" type="button"
@@ -1300,6 +1305,20 @@ class LearnApp extends LitElement {
                   <img src=${step === 3 ? '/folders/' + id + '.webp' : nothing} alt=""><span>${name}</span></label>`)}</div>
             </fieldset>
             </div>`
+          : type === 'edit-project' ? html`
+            <label>Название<input name="name" required maxlength="80" .value=${project.name}></label>
+            <label>Описание<textarea name="description" maxlength="160" rows="2" .value=${project.description ?? ''}></textarea></label>
+            <label>Обложка<select name="folder">
+              ${folders.map(([id, name]) => html`<option value=${id} ?selected=${id === (project.folder ?? 'gel')}>${name}</option>`)}
+            </select></label>
+            <details class="project-links"><summary>ссылки</summary>
+              ${Array.from({ length: 3 }, (_, index) => html`<div class="project-link-row">
+                <label>название ссылки ${index + 1}<input name=${'linkName' + (index + 1)} maxlength="70" .value=${project.sources?.[index]?.type ?? ''}></label>
+                <label>ссылка ${index + 1}<input type="url" name=${'linkUrl' + (index + 1)} maxlength="400" .value=${project.sources?.[index]?.url ?? ''}></label>
+              </div>`)}
+            </details>`
+          : type === 'delete-project' ? html`
+            <p>Удалить «${project.name}»? Задачи останутся в календаре.</p>`
           : type === 'link-existing' ? html`
             <label>Задача<select name="taskId" aria-label="Задача" required>
               ${this.linkableTasks().map((item) => html`<option value=${item.id}>${item.title}, ${dayLabel.format(parseDate(item.date))}</option>`)}
@@ -1323,7 +1342,7 @@ class LearnApp extends LitElement {
             </select></label>` : nothing}
             ${type === 'create' && this.role === 'mentor' ? html`<label class="check"><input type="checkbox" name="movable"> Менти может перенести задачу</label>` : nothing}`}
           ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
-          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : type === 'import-calendar' ? 'Импортировать' : 'Сохранить'}</button>
+          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : type === 'import-calendar' ? 'Импортировать' : type === 'delete-project' ? 'Удалить проект' : 'Сохранить'}</button>
         </form>`;
   }
 
@@ -1353,12 +1372,19 @@ class LearnApp extends LitElement {
         const photo = await compressPhoto(this.modal.file);
         await this.mutate('photo', { mime: 'image/jpeg', contents: await encodePhoto(photo), caption: value('caption') });
         this.photoError = '';
-      } else if (type === 'new-project') {
-        ({ projectId: createdProjectId } = await this.mutate('project', {
-          name: value('name'), description: value('description'), folder: value('folder'), links: Array.from({ length: this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => ({
+      } else if (type === 'new-project' || type === 'edit-project') {
+        const editing = type === 'edit-project';
+        const result = await this.mutate(editing ? 'edit-project' : 'project', {
+          projectId: project?.id,
+          name: value('name'), description: value('description'), folder: value('folder'), links: Array.from({ length: editing ? 3 : this.modal.linkCount ?? 1 }, (_, offset) => offset + 1).map((index) => ({
             name: value('linkName' + index), url: value('linkUrl' + index),
           })),
-        }));
+        });
+        if (!editing) createdProjectId = result.projectId;
+      } else if (type === 'delete-project') {
+        await this.mutate('delete-project', { projectId: project.id });
+        this.selectedProject = null;
+        await this.go('projects');
       } else if (type === 'import-calendar') {
         const file = data.get('calendarFile');
         if (!file?.size || file.size > 512 * 1024 || !/\.ics$/i.test(file.name)) {

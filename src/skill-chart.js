@@ -95,7 +95,9 @@ export class SkillChart extends LitElement {
 
       const growth = this.growth?.index === index ? this.growth : null;
       const rise = Math.max(0, Math.min(1, (frame - 390) / 110));
-      const visible = growth ? growth.from + (growth.to - growth.from) * (1 - (1 - rise) ** 3) : level;
+      const falling = growth && growth.to < growth.from;
+      const easing = falling ? rise ** 2 * (3 - 2 * rise) : 1 - (1 - rise) ** 3;
+      const visible = growth ? growth.from + (growth.to - growth.from) * easing : level;
       if (visible === null || visible <= 0) continue;
       const radius = maxRadius * visible / 100 * progress;
       const facet = growth && growth.to > growth.from ? Math.min(rise * 3, 1) * Math.max(0, Math.min(1, (675 - frame) / 72)) : 0;
@@ -103,7 +105,6 @@ export class SkillChart extends LitElement {
       fill.addColorStop(0, purple ? '#ead4ff' : '#d9fa9f');
       fill.addColorStop(0.65, purple ? '#a66afa' : '#90ed49');
       fill.addColorStop(1, purple ? '#8b43ed' : '#72df2b');
-      const falling = growth && growth.to < growth.from && rise < 1;
       if (facet > 0) {
         context.save();
         context.translate(0, 6 * facet);
@@ -116,7 +117,7 @@ export class SkillChart extends LitElement {
         context.fill();
         context.restore();
       }
-      context.fillStyle = falling ? '#df8576' : fill;
+      context.fillStyle = falling && rise < 1 ? '#df8576' : fill;
       context.globalAlpha = this.active < 0 || this.active === index ? 1 : 0.38;
       context.beginPath();
       context.moveTo(center, center);

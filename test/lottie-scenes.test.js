@@ -68,6 +68,7 @@ test('decrease particles move from the old score to the new score in the affecte
   for (const [sectors, index, to] of [[10, 4, 18], [2, 1, 0], [1, 0, 55]]) {
     const scene = skillDecreaseScene({ index, from: 89, to }, sectors);
     assertValid(scene);
+    assert.equal((scene.op - scene.ip) / scene.fr, 10);
     const radius = ([x, y]) => Math.hypot(x - 210, y - 210);
     const middle = -Math.PI / 2 + (index + .5) * 2 * Math.PI / sectors;
     for (const layer of scene.layers) {

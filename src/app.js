@@ -1009,23 +1009,34 @@ class LearnApp extends LitElement {
         <button class="primary" @click=${() => { this.assessmentStatus = 'questions'; }}>Начать</button>
       </section>`;
     }
-    return html`<section class="assessment">
-      <div class="assessment-progress">
-        <strong>${Math.min(this.answers.length + 1, questions.length)} из ${questions.length}</strong>
-        ${this.answers.length && question ? html`<button class="text-button" @click=${() => {
-          this.pendingAnswer = this.answers.at(-1);
-          this.answers = this.answers.slice(0, -1);
-        }}>Назад</button>` : nothing}
+    return html`<section class="assessment assessment-steps">
+      <div class="assessment-block">
+        <div class="assessment-progress">
+          <strong>${Math.min(this.answers.length + 1, questions.length)} из ${questions.length}</strong>
+          ${this.answers.length && question ? html`<button class="text-button" @click=${() => {
+            this.assessmentBeam = false;
+            this.pendingAnswer = this.answers.at(-1);
+            this.answers = this.answers.slice(0, -1);
+          }}>назад</button>` : nothing}
+        </div>
+        <div class="assessment-segments" role="progressbar" aria-label="Отвечено вопросов"
+          aria-valuenow=${this.answers.length} aria-valuemax=${questions.length}>
+          ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
+          ${this.assessmentBeam ? keyed(this.answers.length, html`<i class="assessment-beam" aria-hidden="true"
+            style=${'--answered:' + this.answers.length}></i>`) : nothing}
+        </div>
       </div>
-      <div class="assessment-segments" aria-label=${`Отвечено вопросов: ${this.answers.length} из ${questions.length}`}>
-        ${questions.map((_, index) => html`<span class=${index < this.answers.length ? 'is-filled' : ''}></span>`)}
+      ${keyed(this.answers.length, html`<div class="assessment-block assessment-question">
+        <h2 id="assessment-question">${question?.title ?? (status === 'saving' ? 'сохраняем результат…' : 'готово! осталось сохранить результат.')}</h2>
+      </div>`)}
+      <div class="assessment-block assessment-options">
+        ${question ? keyed(this.answers.length, html`<div class="answer-list" role="group" aria-labelledby="assessment-question">
+          ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
+        </div>`) : nothing}
+        ${status === 'error' ? html`<p role="alert">результат пока не сохранился. ответы на месте, попробуй ещё раз.</p>` : nothing}
+        <button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
+          @click=${() => this.nextAnswer()}>${remaining > 1 ? 'дальше' : 'сохранить результат'}</button>
       </div>
-      ${question ? keyed(this.answers.length, html`<div class="assessment-question"><h2>${question.title}</h2><div class="answer-list">
-        ${shuffledAnswers(this.answers.length, question.answers).map(({ answer, index }) => html`<button aria-pressed=${this.pendingAnswer === index} @click=${() => { this.pendingAnswer = index; }}>${answer}</button>`)}
-      </div></div>`) : html`<p>${status === 'saving' ? 'Сохраняем результат…' : 'Готово! Осталось сохранить результат.'}</p>`}
-      ${status === 'error' ? html`<p role="alert">Результат пока не сохранился. Ответы на месте, попробуй ещё раз.</p>` : nothing}
-      <button class="primary" ?disabled=${status === 'saving' || (question && this.pendingAnswer === null)}
-        @click=${() => this.nextAnswer()}>${remaining > 1 ? 'Дальше' : 'Сохранить результат'}</button>
     </section>`;
   }
 
@@ -1033,6 +1044,7 @@ class LearnApp extends LitElement {
     if (this.person.soft || this.assessmentStatus === 'saving') return;
     if (this.answers.length < questions.length) {
       if (this.pendingAnswer === null) return;
+      this.assessmentBeam = true;
       this.answers = [...this.answers, this.pendingAnswer];
       this.pendingAnswer = null;
       // На рубежах отдельного экрана нет: следующий вопрос открывается сразу, а сцена пролетает поверх него.

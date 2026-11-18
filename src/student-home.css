@@ -662,6 +662,25 @@ mentor-note { display: block; }
 .project-page { display: grid; gap: 18px; padding: 26px 14px 40px; }
 .project-page h1 { font-size: 32px; }
 .project-page h2 { font-size: 19px; }
+.screen[data-page=project] { background: #f7f7f7; padding-top: 8px; }
+.project-sheet {
+  min-height: 75dvh;
+  border-radius: 28px 28px 0 0;
+  background: #fff;
+}
+.project-sheet-header { display: grid; justify-items: start; gap: 8px; }
+.project-sheet-header h1 { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.project-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.project-sheet-header .text-button { min-height: 44px; }
+.project-controls button { padding: 0 12px; border-radius: 12px; background: #f6f6f6; }
+.project-controls .project-delete { color: #802d22; }
+@media (prefers-reduced-motion: no-preference) {
+  learn-app .screen > .project-sheet { animation: project-sheet-in .36s cubic-bezier(.2,.75,.25,1) both; }
+}
+@keyframes project-sheet-in {
+  from { transform: translateY(24dvh); opacity: .65; }
+  to { transform: translateY(0); opacity: 1; }
+}
 .project-page > p { color: #67656d; }
 .project-folder :is(strong,small) { text-align: left; }
 .folder-art { position: relative; display: block; width: 100%; aspect-ratio: 153 / 111; }

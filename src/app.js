@@ -1188,14 +1188,17 @@ class LearnApp extends LitElement {
   projectPage() {
     const project = this.person.projects.find((item) => item.id === this.selectedProject?.id);
     if (!project) return this.projects();
-    return html`<button class="text-button project-back" @click=${() => this.go('projects')}>← проекты</button>
-      <section class="project-page"><h1>${project.name}</h1>
+    return html`<section class="project-page project-sheet" aria-labelledby="project-title">
+        <header class="project-sheet-header">
+          <button class="text-button" aria-label="Выйти в список проектов" @click=${() => this.go('projects')}>← проекты</button>
+          <h1 id="project-title">${project.name}</h1>
+          <div class="project-controls">
+            <button class="text-button" @click=${() => this.open({ type: 'edit-project', project })}>редактировать</button>
+            <button class="text-button project-delete" @click=${() => this.open({ type: 'delete-project', project })}>удалить</button>
+          </div>
+        </header>
         ${project.description ? html`<p>${project.description}</p>` : nothing}
         <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
-        <div class="project-actions">
-          <button class="text-button" @click=${() => this.open({ type: 'edit-project', project })}>редактировать</button>
-          <button class="text-button" @click=${() => this.open({ type: 'delete-project', project })}>удалить проект</button>
-        </div>
         <section class="project-plan"><h2>план обучения</h2>
           ${this.projectCalendar(project)}
           <div class="project-actions">
@@ -1243,7 +1246,7 @@ class LearnApp extends LitElement {
     const start = weekStart(selected);
     const days = weekDays.map((label, index) => ({ label, day: shiftDate(start, index) }));
     const dayTasks = filterTasks(tasks, 'today', selected);
-    return html`<details class="project-calendar">
+    return html`<details class="project-calendar" open>
       <summary><strong>календарь задач</strong>
         <span>${next ? 'ближайшая: ' + next.title + ', ' + dayLabel.format(parseDate(nextDay)) : 'нет ближайших задач'}</span>
       </summary>

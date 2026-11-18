@@ -45,6 +45,28 @@ const projectOwner = '3f2b8c1e-7a4d-4e9b-9c1f-0a1b2c3d4e5f';
 const projectId = '7968c571-268d-4e27-8717-3a85d206aa61';
 const projectRoute = (action) => '/people/' + projectOwner + '/' + action;
 
+test('mentor reset clears learning data for one mentee and preserves their phone', async () => {
+  const db = fakeDatabase(mentor, { soft: [50], projects: [{ id: projectId }], phone: '+70000000000' });
+  const result = await call(makeApi({}, db), post(projectRoute('reset-mentee'), { confirm: true }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(db.queries.slice(-3), [
+    { sql: 'DELETE FROM tasks WHERE person = $1', values: [projectOwner] },
+    { sql: 'DELETE FROM photos WHERE person = $1', values: [projectOwner] },
+    { sql: 'UPDATE accounts SET profile = $1 WHERE id = $2', values: [{ phone: '+70000000000' }, projectOwner] },
+  ]);
+});
+
+test('reset requires mentor ownership and explicit confirmation', async () => {
+  for (const [actor, profile, confirm, status] of [
+    [mentee, {}, true, 403], [mentor, undefined, true, 403], [mentor, {}, false, 422],
+  ]) {
+    const db = fakeDatabase(actor, profile);
+    const result = await call(makeApi({}, db), post(projectRoute('reset-mentee'), { confirm }));
+    assert.equal(result.status, status);
+    assert.ok(!db.queries.some(({ sql }) => /^(DELETE|UPDATE)/.test(sql)));
+  }
+});
+
 test('project edits preserve its identity and comments', async () => {
   const comments = [{ text: 'review' }];
   const db = fakeDatabase(mentor, { projects: [{ id: projectId, name: 'old', comments }] });

@@ -692,6 +692,7 @@ class LearnApp extends LitElement {
         <button class="text-button" @click=${() => this.go('skills')}>Навыки</button>
         <button class="text-button" @click=${() => this.go('calendar')}>Задачи</button>
         <button class="text-button" @click=${() => this.go('projects')}>Проекты</button>
+        ${this.personId ? html`<button class="text-button" @click=${() => this.open({ type: 'reset-mentee', personId: this.personId, name })}>сбросить данные</button>` : nothing}
       </div>` : nothing}
       <section class="profile-card3d" aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
         @pointerdown=${(event) => this.cardDown(event)} @pointermove=${(event) => this.cardMove(event)}
@@ -1304,6 +1305,7 @@ class LearnApp extends LitElement {
       photo: 'Новое воспоминание', 'import-calendar': 'Импорт календаря',
       'new-project': step === 3 ? 'Выбери папку' : 'Новый проект', 'link-existing': 'Привязать задачу',
       'edit-project': 'Редактировать проект', 'delete-project': 'Удалить проект?',
+      'reset-mentee': 'Сбросить данные менти?',
     }[type];
     return html`
       ${type === 'new-project' && step > 1 ? html`<button class="text-button wizard-back" type="button"
@@ -1347,6 +1349,9 @@ class LearnApp extends LitElement {
                 <label>ссылка ${index + 1}<input type="url" name=${'linkUrl' + (index + 1)} maxlength="400" .value=${project.sources?.[index]?.url ?? ''}></label>
               </div>`)}
             </details>`
+          : type === 'reset-mentee' ? html`
+            <p>У «${this.modal.name}» удалятся результаты теста, навыки, проекты, задачи и воспоминания. Доступ к мини-приложению сохранится.</p>
+            <label class="check"><input type="checkbox" name="confirm" required> подтверждаю сброс</label>`
           : type === 'delete-project' ? html`
             <p>Удалить «${project.name}»? Задачи останутся в календаре.</p>`
           : type === 'link-existing' ? html`
@@ -1372,7 +1377,7 @@ class LearnApp extends LitElement {
             </select></label>` : nothing}
             ${type === 'create' && this.role === 'mentor' ? html`<label class="check"><input type="checkbox" name="movable"> Менти может перенести задачу</label>` : nothing}`}
           ${this.formError ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
-          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : type === 'import-calendar' ? 'Импортировать' : type === 'delete-project' ? 'Удалить проект' : 'Сохранить'}</button>
+          <button class="primary" type="submit" ?disabled=${this.formBusy}>${this.formBusy ? 'Сохраняем…' : type === 'reset-mentee' ? 'Сбросить данные' : type === 'new-project' ? (step === 3 ? 'Создать проект' : 'Дальше') : type === 'photo' ? 'Отправить' : type === 'import-calendar' ? 'Импортировать' : type === 'delete-project' ? 'Удалить проект' : 'Сохранить'}</button>
         </form>`;
   }
 
@@ -1394,7 +1399,9 @@ class LearnApp extends LitElement {
     this.formBusy = true;
     this.formError = '';
     try {
-      if (type === 'title') {
+      if (type === 'reset-mentee') {
+        await request('/people/' + this.modal.personId + '/reset-mentee', { confirm: data.has('confirm') });
+      } else if (type === 'title') {
         await this.mutate('title', { title: value('title') });
       } else if (type === 'hard') {
         await this.mutate('hard', { name: value('name'), skills: value('skills').split(',') });

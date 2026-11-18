@@ -205,7 +205,14 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
       allowed(row);
       const profile = row.profile;
       const mentor = actor.role === 'mentor';
-      if (action === 'assessment') {
+      if (action === 'reset-mentee') {
+        allowed(mentor);
+        requireInput(data.confirm === true, 'Подтверди сброс данных менти.');
+        await client.query('DELETE FROM tasks WHERE person = $1', [person]);
+        await client.query('DELETE FROM photos WHERE person = $1', [person]);
+        await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile.phone ? { phone: profile.phone } : {}, person]);
+        return {};
+      } else if (action === 'assessment') {
         allowed(!mentor);
         if (profile.soft) throw new ApiError(409, 'Входной тест уже пройден.');
         const levels = scoreAssessment(data.answers);

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "e22d328d-1a79-44df-b740-5ac04f1e9a0b",
+  "app_path": "/Library/Developer/CoreSimulator/Volumes/iOS_23E254a/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.4.simruntime/Contents/Resources/RuntimeRoot/Applications/MobileSafari.app",
+  "simulator": "70B169BC-1696-4395-B23A-02AA6E8ACDA7",
+  "status": "rendered",
+  "next_step": "The summary-width revision passed technical checks. Simulator source still has frame gaps.",
+  "artifacts": {
+    "scenario": "scenario.json",
+    "prepared": "prepared-content.json",
+    "capture": "raw.mp4",
+    "actions": "raw-actions.json",
+    "observations": "observations.json",
+    "verification": "verification.md",
+    "canvas-rehearsal": "rehearsal3.mp4",
+    "render": "skill-flow.mp4",
+    "technical-audit": "render-quality.json",
+    "corrected-capture": "revision2.mp4",
+    "corrected-cut": "revision-cut.mp4",
+    "corrected-actions": "revision2-actions.json",
+    "revised-render": "skill-flow-revised.mp4",
+    "revised-audit": "revision-quality.json",
+    "summary-source": "summary-source.mp4",
+    "summary-actions": "summary-source-actions.json",
+    "summary-cut": "summary-cut.mp4",
+    "summary-render": "skill-flow-summary.mp4",
+    "summary-audit": "summary-quality.json"
+  }
+}

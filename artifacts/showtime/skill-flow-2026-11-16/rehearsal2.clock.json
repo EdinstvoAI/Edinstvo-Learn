@@ -1,0 +1,27 @@
+{
+  "simulator": "70B169BC-1696-4395-B23A-02AA6E8ACDA7",
+  "output": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/rehearsal2.mp4",
+  "recorder_pid": 30534,
+  "human_review": {
+    "approved": true,
+    "stage": "preparation",
+    "scenario_sha256": "34540ce64e435254a4a7759ebd00e366a65609b239b956d368a4425205e10909",
+    "scenario_approval_sha256": "cbbdd5da3ea59987e9cda8fb0f4d285c6a1bb8f2d13b601e360880d63a98feb3",
+    "story_materials_checked": false,
+    "visual_quality_automatically_verified": false
+  },
+  "purpose": "preparation-preview",
+  "request_ms": 1794894491554.795,
+  "ready_ms": 1794894493697.494,
+  "stop_requested_ms": 1794894522010.811,
+  "tail_sentinel": true,
+  "sentinel_requested_ms": 1794894525021.459,
+  "clock_note": "Video origin is simctl's Recording started log marker. Command timings and marker latency are not physical touch-down measurements.",
+  "simctl_pid": 30539,
+  "ready_uptime_ns": 40331974990916,
+  "sentinel_completed_ms": 1794894526118.645,
+  "exit_code": 0,
+  "completed_ms": 1794894526721.765,
+  "completed_uptime_ns": 40364999240541,
+  "wall_clock_drift_seconds": 2.13710937444489e-05
+}

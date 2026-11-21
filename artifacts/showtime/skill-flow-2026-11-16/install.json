@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-17T05:51:21.910432+00:00",
+  "requested_udid": "70B169BC-1696-4395-B23A-02AA6E8ACDA7",
+  "artifact_app": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/Capture.app",
+  "passed": true,
+  "artifact": {
+    "app_path": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/Capture.app",
+    "CFBundleIdentifier": "local.edinstvo.showtime",
+    "CFBundleShortVersionString": "1.0",
+    "CFBundleVersion": "1",
+    "CFBundleExecutable": "Capture"
+  },
+  "simulator": {
+    "udid": "70B169BC-1696-4395-B23A-02AA6E8ACDA7",
+    "name": "iPhone 17 Pro",
+    "state": "Booted",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-4",
+    "isAvailable": true
+  },
+  "installed": {
+    "app_path": "/Users/makark/Library/Developer/CoreSimulator/Devices/70B169BC-1696-4395-B23A-02AA6E8ACDA7/data/Containers/Bundle/Application/9CA68931-63C9-44F3-BC39-96513078321F/Capture.app",
+    "CFBundleIdentifier": "local.edinstvo.showtime",
+    "CFBundleShortVersionString": "1.0",
+    "CFBundleVersion": "1",
+    "CFBundleExecutable": "Capture"
+  },
+  "metadata": [
+    {
+      "field": "CFBundleIdentifier",
+      "artifact": "local.edinstvo.showtime",
+      "installed": "local.edinstvo.showtime",
+      "match": true
+    },
+    {
+      "field": "CFBundleShortVersionString",
+      "artifact": "1.0",
+      "installed": "1.0",
+      "match": true
+    },
+    {
+      "field": "CFBundleVersion",
+      "artifact": "1",
+      "installed": "1",
+      "match": true
+    },
+    {
+      "field": "CFBundleExecutable",
+      "artifact": "Capture",
+      "installed": "Capture",
+      "match": true
+    }
+  ],
+  "binaries": [
+    {
+      "path": "Capture",
+      "role": "main",
+      "artifact": {
+        "sha256": "faa703bd9db7e01b154b0f066fae5ce615ce4d4eed03b90adca4ae6e514bdeaa",
+        "bytes": 87936,
+        "mtime_ns": 1794894460761258453
+      },
+      "installed": {
+        "sha256": "faa703bd9db7e01b154b0f066fae5ce615ce4d4eed03b90adca4ae6e514bdeaa",
+        "bytes": 87936,
+        "mtime_ns": 1794894460761258453
+      },
+      "match": true
+    }
+  ],
+  "status": "passed"
+}

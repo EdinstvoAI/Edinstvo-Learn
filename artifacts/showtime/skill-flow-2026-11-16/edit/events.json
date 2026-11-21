@@ -1,0 +1,33 @@
+{
+  "coordinate_space": {
+    "width": 402.0,
+    "height": 874.0
+  },
+  "fps": 60,
+  "duration": 23.05,
+  "timing_note": "AXe HID dispatch log timestamps; not measured physical touch-down. Native UI timing review is required.",
+  "events": [
+    {
+      "id": "answer",
+      "type": "tap",
+      "x": 200.0,
+      "y": 438.0,
+      "anchor_frame": 25,
+      "command_duration": 0.05999999999999961,
+      "alignment": "Estimated contact using the first observed button response; raw AXe dispatch retained separately",
+      "frame": 84,
+      "time": 1.4
+    },
+    {
+      "id": "submit",
+      "type": "tap",
+      "x": 200.0,
+      "y": 580.0,
+      "anchor_frame": 25,
+      "command_duration": 0.05999999999999961,
+      "alignment": "Estimated contact using the first observed button response; raw AXe dispatch retained separately",
+      "frame": 141,
+      "time": 2.35
+    }
+  ]
+}

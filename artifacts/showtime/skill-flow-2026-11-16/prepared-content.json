@@ -1,0 +1,184 @@
+{
+  "schema_version": 2,
+  "kind": "prepared-content",
+  "scenario_id": "skill-flow-2026-11-16",
+  "scenario_sha256": "34540ce64e435254a4a7759ebd00e366a65609b239b956d368a4425205e10909",
+  "content": {
+    "language": "ru",
+    "scene_content": {
+      "setting": "Local Edinstvo Learn in a WKWebView on iPhone 17 Pro, full simulator capture",
+      "actors": [
+        "A mentee completing the assessment",
+        "A mentor whose score changes are already queued in the mentee profile"
+      ],
+      "supporting_content": [
+        "The final assessment question and its real answer controls",
+        "The existing full-screen Lottie completion scene",
+        "The soft-skills wheel with a growth event and a decrease event"
+      ],
+      "continuity": "The same mentee account, skill values and white mobile-first interface remain visible throughout."
+    },
+    "storyboard": [
+      {
+        "id": "context",
+        "role": "context",
+        "file": "frames/context.png",
+        "description": "context"
+      },
+      {
+        "id": "entry",
+        "role": "entry",
+        "file": "frames/entry.png",
+        "description": "entry"
+      },
+      {
+        "id": "action",
+        "role": "action",
+        "file": "frames/action.png",
+        "description": "action"
+      },
+      {
+        "id": "correction",
+        "role": "correction",
+        "file": "frames/correction.png",
+        "description": "correction"
+      },
+      {
+        "id": "result",
+        "role": "result",
+        "file": "frames/result.png",
+        "description": "result"
+      }
+    ],
+    "preparation": {
+      "profile": {
+        "path": "profile.json",
+        "sha256": "b106f2c878e990f9f45bc923c4a133fd7c527484ea562c53d521925cb3e0bfd5"
+      },
+      "viewport": {
+        "width": 402,
+        "height": 874
+      },
+      "visible_height": 874,
+      "keyboard_visible": false,
+      "typing_visible": false,
+      "framing": [
+        {
+          "layout": "full",
+          "device_id": "iphone-17-pro-silver",
+          "geometry": {
+            "path": "stage/geometry.json",
+            "sha256": "5293a7d4da890392e844c6be577a90ac44e25b2868f72365dd188f94949e8129"
+          }
+        }
+      ],
+      "checks": {
+        "full_height": {
+          "status": "ready",
+          "note": "Full native viewport through the transition",
+          "evidence": [
+            {
+              "path": "rehearsal2.mp4",
+              "sha256": "a30f95709e96677f9a4af436deaed0e4353d51e724e933c9a63d0ff27ee05fb2"
+            }
+          ]
+        },
+        "visible_controls": {
+          "status": "ready",
+          "note": "Answer and submit visible within the phone",
+          "evidence": [
+            {
+              "path": "frames/entry.png",
+              "sha256": "b5beab38c9eb9b001830d2fa492c4449ed4168df9d0061c21624493418a0eac7"
+            }
+          ]
+        },
+        "no_editorial_text": {
+          "status": "ready",
+          "note": "Only the app UI and simulator status bar",
+          "evidence": [
+            {
+              "path": "frames/context.png",
+              "sha256": "e9a20208454da458e50a1d1ef5d3d8f76b2b62b149f2c5abe64087621973f2a2"
+            },
+            {
+              "path": "frames/entry.png",
+              "sha256": "b5beab38c9eb9b001830d2fa492c4449ed4168df9d0061c21624493418a0eac7"
+            },
+            {
+              "path": "frames/action.png",
+              "sha256": "0b5d85c91a0aa8645a8e10cbd79227fb045c32b3cc787f5e6a81b34abb7372e2"
+            },
+            {
+              "path": "frames/correction.png",
+              "sha256": "eb7dc826487eb9c3343327f4ef208194b1caabc20895e4f254757a4b20e41f01"
+            },
+            {
+              "path": "frames/result.png",
+              "sha256": "981781f7ce8fc7bc18de331370d7248400a1bb7e69e1ca6a50f8906e559f63b8"
+            }
+          ]
+        },
+        "keyboard_suggestions": {
+          "status": "not_applicable",
+          "note": "No keyboard shown",
+          "evidence": []
+        },
+        "character_typing": {
+          "status": "not_applicable",
+          "note": "No text entered in the capture",
+          "evidence": []
+        }
+      }
+    },
+    "story_review": {
+      "status": "passed",
+      "basis": "frames_only",
+      "reviewer": "frame_review",
+      "reference": "Independent ordered-frame pass and follow-up in Codex",
+      "answers": {
+        "context": "Question 30 of 30 asks how the learner tackles a daunting task.",
+        "entry_point": "The third answer is visibly selected and the save button turns black.",
+        "action": "Purple rounded shapes, a lavender sphere and a pink burst fill the screen. Stills cannot establish the trigger or timing.",
+        "result": "Liza sees a green soft-skills radar. The correction frame shows a coral wedge near five o\u2019clock; the bottom navigation obscures the correction text.",
+        "believability": "The skills dashboard is a plausible destination after the assessment.",
+        "continuity": "The mobile shell and 09:41 status bar remain consistent through the quiz, illustration and skills result."
+      },
+      "materials_sha256": "faadd3378007eb46be9fec8b0b54f6db03715a03ac43939ad141ef13011a6822"
+    }
+  },
+  "files": [
+    {
+      "path": "frames/context.png",
+      "sha256": "e9a20208454da458e50a1d1ef5d3d8f76b2b62b149f2c5abe64087621973f2a2"
+    },
+    {
+      "path": "frames/entry.png",
+      "sha256": "b5beab38c9eb9b001830d2fa492c4449ed4168df9d0061c21624493418a0eac7"
+    },
+    {
+      "path": "frames/action.png",
+      "sha256": "0b5d85c91a0aa8645a8e10cbd79227fb045c32b3cc787f5e6a81b34abb7372e2"
+    },
+    {
+      "path": "frames/correction.png",
+      "sha256": "eb7dc826487eb9c3343327f4ef208194b1caabc20895e4f254757a4b20e41f01"
+    },
+    {
+      "path": "frames/result.png",
+      "sha256": "981781f7ce8fc7bc18de331370d7248400a1bb7e69e1ca6a50f8906e559f63b8"
+    },
+    {
+      "path": "profile.json",
+      "sha256": "b106f2c878e990f9f45bc923c4a133fd7c527484ea562c53d521925cb3e0bfd5"
+    },
+    {
+      "path": "stage/geometry.json",
+      "sha256": "5293a7d4da890392e844c6be577a90ac44e25b2868f72365dd188f94949e8129"
+    },
+    {
+      "path": "rehearsal2.mp4",
+      "sha256": "a30f95709e96677f9a4af436deaed0e4353d51e724e933c9a63d0ff27ee05fb2"
+    }
+  ]
+}

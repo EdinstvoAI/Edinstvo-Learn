@@ -1,0 +1,473 @@
+{
+  "capture": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/revision-edit.mp4",
+  "capture_sha256": "ffaf9cc98a7e6c2c9f5912aa38083de4481812eb9597a22c9f3797f0846a4daa",
+  "capture_start": 0,
+  "duration": 22.866666666666667,
+  "output": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/revision-composed.mp4",
+  "geometry": {
+    "device": [
+      534,
+      90,
+      851,
+      1740
+    ],
+    "screen": [
+      580,
+      134,
+      759,
+      1652
+    ],
+    "radius": [
+      68.31,
+      69.384
+    ]
+  },
+  "source_size": [
+    1206,
+    2622
+  ],
+  "scaled_size": [
+    760,
+    1652
+  ],
+  "crop_offset": [
+    0,
+    0
+  ],
+  "events": [
+    {
+      "id": "answer",
+      "gesture_type": "tap",
+      "event_time": 1.4229999999999996,
+      "anchor_frame": 25,
+      "anchor_output_frame": 85,
+      "anchor_quantization_seconds": -0.006333333333332858,
+      "tap_start": 1.0,
+      "tap_start_frame": 60,
+      "tap_end_frame": 100,
+      "source_point": [
+        200,
+        438
+      ],
+      "canvas_point": [
+        958.1094527363184,
+        961.8901601830664
+      ],
+      "tint_rgb": [
+        167,
+        195,
+        238
+      ],
+      "visualization": "canonical_touch_down_ring",
+      "sequence_frames": 41,
+      "hold_frames": 0,
+      "hold_seconds": null,
+      "hold_timing": null,
+      "source_frame_map": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40
+      ]
+    },
+    {
+      "id": "submit",
+      "gesture_type": "tap",
+      "event_time": 3.973,
+      "anchor_frame": 25,
+      "anchor_output_frame": 238,
+      "anchor_quantization_seconds": -0.00633333333333308,
+      "tap_start": 3.55,
+      "tap_start_frame": 213,
+      "tap_end_frame": 253,
+      "source_point": [
+        200,
+        580
+      ],
+      "canvas_point": [
+        958.1094527363184,
+        1230.2929061784896
+      ],
+      "tint_rgb": [
+        167,
+        195,
+        238
+      ],
+      "visualization": "canonical_touch_down_ring",
+      "sequence_frames": 41,
+      "hold_frames": 0,
+      "hold_seconds": null,
+      "hold_timing": null,
+      "source_frame_map": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40
+      ]
+    }
+  ],
+  "profile_check": null,
+  "tap": {
+    "sequence": "/Users/makark/showtime/assets/tap/native/tap_%05d.png",
+    "start_number": 0,
+    "fps": 60,
+    "frames": 41,
+    "width": 530,
+    "blur": 0,
+    "timing_stretched": false,
+    "tint_rgb": [
+      167,
+      195,
+      238
+    ],
+    "overlay_space": "stage",
+    "backdrop_sigma": 42,
+    "backdrop_mask": "native_ring_alpha_normalized_to_peak",
+    "maximum_diameter_fraction": 0.485,
+    "monochrome_rgb": [
+      49,
+      123,
+      255
+    ],
+    "spatial_resampling": "alpha_8bit_bilinear_with_validated_constant_rgb",
+    "temporal_resampling": "original entry/release frames at original fps; long press repeats the contact frame",
+    "frame_sha256": {
+      "0": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92",
+      "1": "178d7bda54cbde8c95f36c1366c4ed613c663c5633f2e113dc53dc64e117dd5b",
+      "2": "49a897d027abad26e783f3a152b257863d1e56a11d896a51be104e09595e0ab9",
+      "3": "7b88fafb7a256e7b3ae633c27c755e3fbf8087499e8e38dd8d8074204cfaa72e",
+      "4": "0d716984fe06ae84fbaac4bb39cd53ebb154b420a9a3dfda8eddab6da3444ac6",
+      "5": "4cc389feb8df7b7e38fc7f8019841a13bf789fc4dc8b666cda5e6db88cfa97b5",
+      "6": "066eb99090af3636d25f56b90be2ce652fc6034054d39483863571118a8e52a3",
+      "7": "3129bf99ded4498e2e284b11480e5cf41c91b86deec3e24b461e438c9256d6d3",
+      "8": "5130ce0de0eb41b45da87151e5fd0cc78e889951841b7c3b1d8606052715a59e",
+      "9": "1212103c51724be2049fc05cf7738157b2775fa99d4a48e1dbd4efe1e8eabd0e",
+      "10": "19d6f01b5e9bf95d650fbaa8c45c884284ea1a2b63e2152224d9afb3c17b0b6e",
+      "11": "1d21f1d8ff5d6acb7961d8184cef75c84583be096bc1c278a49794cb76170bcf",
+      "12": "d8d0e90244883fe907286f9ecf84707580eb5707e067ee723936aedc71b50a3f",
+      "13": "ae827c4f8eafffc1a4bb063fd64458632b525a53a24d06b4360218fa7e52338c",
+      "14": "89181dbefc61c6a04fad034401c33b88fbb84fbbf9baf8486d314a69a95e0ed3",
+      "15": "716d0ed371e4386ad6df0ffa60c23b1461a9efc6a4660d4c342fb36f12f70f44",
+      "16": "a53996fff4ea6326567dd159d695cfa9b8dfec1e066fa9cb67b71bee603212da",
+      "17": "4c96c8b1a184fae9487f3e0a5cb91ecc3e18b1bd5701e34bf76bf6713d30d7b7",
+      "18": "dc973e3a7f1d6c98c928b1b09d4d79f0b50cf653e88cd39f654e7f50782ac587",
+      "19": "af730bdd6bdf273b09e0ada0aec4c2dc53cb12f3ab46c78cfe25752343fa74fa",
+      "20": "88656e8c18d4dd0145852b2282e2c9b53b24896a32f0c1fa5f62bca9fb482e59",
+      "21": "b4363a2d9354fd1578770044741c11820af74ce30254e0b22a343b5d1154dd86",
+      "22": "d3f8080f57734143aa48bea7491e29a460fcdf814a3e2b191865ed530fa7e6ca",
+      "23": "9e0266964633604536254c91b79e25b3b309447521e5c42e3a675eb0bcd46735",
+      "24": "4e0c3ab506e567a49011dc22267d7185763a7b3b6977620ecd93acc4667d810c",
+      "25": "fb35afeee5549398cd41defb8ed3a94f49582ffb5c1eebbfb73135d51a9f6b46",
+      "26": "96e0d32ad0a331e53f5205966e0a0bdeea5739d74b9eed366010c58d1262ef4c",
+      "27": "8c8af306eee1efb4f7620b6fb49d080c4add8e96122074db57b847637301f7f1",
+      "28": "0f40749625976e3ca8e5a547853d8936d34660c57c1198a50be63d3b88f2080f",
+      "29": "f73933fea6fdc98792e566d2a228956650cda1cb115355c5de5bfe10b3044b80",
+      "30": "5b85e2bd0548b11275dcb497f3976fb6e22b9650529b2f353d9062ef25f95011",
+      "31": "be89e97ecaf3e9ec6606a018068985447f8c3c470692f5a4acfc7a49df2d2c8f",
+      "32": "9fe5294d43689b0cdc70c1a9443d3dd6004a35c93e21929de31a66c1d36aac5a",
+      "33": "6f346c7e80995e8b3a99dbbcd4732f723d2fbafe780f992f6ac2cf7ecc10b0d5",
+      "34": "f22b96fbd2996a87af420063459aadf23ada61e1bf7ac7f4d389466ea134589b",
+      "35": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92",
+      "36": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92",
+      "37": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92",
+      "38": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92",
+      "39": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92",
+      "40": "34fd171117aa612a440ddfdadf1973db1735c96f1e101e5d2e1360c00e6ccf92"
+    }
+  },
+  "output_probe": {
+    "streams": [
+      {
+        "index": 0,
+        "codec_name": "h264",
+        "codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+        "profile": "Constrained Baseline",
+        "codec_type": "video",
+        "codec_tag_string": "avc1",
+        "codec_tag": "0x31637661",
+        "mime_codec_string": "avc1.42c033",
+        "width": 1920,
+        "height": 1920,
+        "coded_width": 1920,
+        "coded_height": 1920,
+        "has_b_frames": 0,
+        "pix_fmt": "yuv420p",
+        "level": 51,
+        "color_range": "tv",
+        "color_space": "bt709",
+        "chroma_location": "left",
+        "field_order": "progressive",
+        "is_avc": "true",
+        "nal_length_size": "4",
+        "id": "0x1",
+        "r_frame_rate": "60/1",
+        "avg_frame_rate": "60/1",
+        "time_base": "1/15360",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 351232,
+        "duration": "22.866667",
+        "bit_rate": "2489240",
+        "bits_per_raw_sample": "8",
+        "nb_frames": "1372",
+        "extradata_size": 42,
+        "disposition": {
+          "default": 1,
+          "dub": 0,
+          "original": 0,
+          "comment": 0,
+          "lyrics": 0,
+          "karaoke": 0,
+          "forced": 0,
+          "hearing_impaired": 0,
+          "visual_impaired": 0,
+          "clean_effects": 0,
+          "attached_pic": 0,
+          "timed_thumbnails": 0,
+          "non_diegetic": 0,
+          "captions": 0,
+          "descriptions": 0,
+          "metadata": 0,
+          "dependent": 0,
+          "still_image": 0,
+          "multilayer": 0
+        },
+        "tags": {
+          "language": "und",
+          "handler_name": "VideoHandler",
+          "encoder": "Lavc63.1.102 libx264"
+        }
+      }
+    ],
+    "format": {
+      "filename": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/tmp_kt0dqnd/revision-composed.mp4",
+      "nb_streams": 1,
+      "nb_programs": 0,
+      "nb_stream_groups": 0,
+      "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+      "format_long_name": "QuickTime / MOV",
+      "start_time": "0.000000",
+      "duration": "22.866667",
+      "size": "7121524",
+      "bit_rate": "2491495",
+      "probe_score": 100,
+      "tags": {
+        "major_brand": "isom",
+        "minor_version": "512",
+        "compatible_brands": "isomiso2avc1mp41",
+        "encoder": "Lavf63.1.102"
+      }
+    }
+  },
+  "layout": "full",
+  "quality": {
+    "schema_version": 1,
+    "scope": "product_delivery",
+    "output": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/revision-composed.mp4",
+    "output_sha256": "5decde03bde0919073da1ef4a2aaeaf5414e161b85cfd99429f7d929afee2ee1",
+    "passed": true,
+    "render_cadence_60fps": "passed",
+    "motion_fidelity": "unverified",
+    "policy": {
+      "target_fps": "60/1",
+      "timestamp_tolerance_ms": 0.5,
+      "observed_rate_tolerance_fps": 0.005,
+      "input_capture_may_be_vfr": true,
+      "input_capture_fps_requirement": null,
+      "repeated_output_frames_allowed": true,
+      "minimum_decoded_frames": 2
+    },
+    "failures": [],
+    "limitations": [
+      "Only the supplied file is measured.",
+      "PTS and durations establish output frame timing, not unique visual states or motion fidelity.",
+      "Exporting at 60 fps does not reconstruct motion absent from the input recording.",
+      "This audit invokes ffprobe only; it never applies fps filters, interpolation or timestamp repair."
+    ],
+    "output_bytes": 7121524,
+    "stream": {
+      "codec_name": "h264",
+      "width": 1920,
+      "height": 1920,
+      "r_frame_rate": "60/1",
+      "avg_frame_rate": "60/1",
+      "time_base": "1/15360",
+      "duration_ts": 351232,
+      "duration": "22.866667",
+      "nb_frames": "1372",
+      "disposition": {
+        "default": 1,
+        "dub": 0,
+        "original": 0,
+        "comment": 0,
+        "lyrics": 0,
+        "karaoke": 0,
+        "forced": 0,
+        "hearing_impaired": 0,
+        "visual_impaired": 0,
+        "clean_effects": 0,
+        "attached_pic": 0,
+        "timed_thumbnails": 0,
+        "non_diegetic": 0,
+        "captions": 0,
+        "descriptions": 0,
+        "metadata": 0,
+        "dependent": 0,
+        "still_image": 0,
+        "multilayer": 0
+      },
+      "tags": {
+        "language": "und",
+        "handler_name": "VideoHandler",
+        "encoder": "Lavc63.1.102 libx264"
+      }
+    },
+    "decoded_frame_count": 1372,
+    "frame_duration_ms": {
+      "min": 16.666666666666668,
+      "max": 16.666666666666668,
+      "last": 16.666666666666668
+    },
+    "timing": {
+      "first_pts": 0.0,
+      "last_pts": 22.85,
+      "first_pts_offset_normalized": true,
+      "observed_fps": 60.0,
+      "interval_min_ms": 16.666666666666668,
+      "interval_max_ms": 16.666666666666668,
+      "maximum_step_error_ms": 0.0,
+      "maximum_grid_error_ms": 0.0,
+      "interval_violations": 0,
+      "gap_count": 0,
+      "gap_examples": []
+    },
+    "delivery_policy": {
+      "minimum_seconds": null,
+      "maximum_seconds": null,
+      "minimum_decoded_frames": 1,
+      "maximum_decoded_frames": null,
+      "target_fps": "60/1",
+      "boundaries_inclusive": true,
+      "automatic_clamp_or_stretch": false
+    },
+    "delivery_duration": {
+      "status": "passed",
+      "decoded_frame_count": 1372,
+      "frame_count_in_range": true,
+      "seconds_at_verified_60fps": 22.866666666666667,
+      "requires_verified_60fps": true
+    },
+    "delivery_format": {
+      "codec": "h264",
+      "pix_fmt": "yuv420p",
+      "extra_streams": [],
+      "sample_aspect_ratio": null
+    },
+    "content": {
+      "luma_range": 252,
+      "changing_frames": 751
+    },
+    "tap_rings": [
+      {
+        "id": "answer",
+        "contact_frame": 85,
+        "reference_frame": 59,
+        "observed_change": 111.21,
+        "expected_change": 75.45,
+        "status": "passed"
+      },
+      {
+        "id": "submit",
+        "contact_frame": 238,
+        "reference_frame": 212,
+        "observed_change": 75.77,
+        "expected_change": 26.31,
+        "status": "passed"
+      }
+    ]
+  },
+  "events_source": {
+    "path": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/revision-events.json",
+    "sha256": "c67e001a819f05b65933cfb1530b5c9dba088dae622c216ad5959f81b857d3ac"
+  },
+  "provenance": {
+    "/Users/makark/showtime/scripts/compose_pilot.py": "e7caf5bad83ec1519751d0f6af84b089044da5368d45cd4d06f0cb9576488190",
+    "profile.json": "b106f2c878e990f9f45bc923c4a133fd7c527484ea562c53d521925cb3e0bfd5",
+    "/Users/makark/showtime/assets/showtime/phones/iphone-17-pro-silver.png": "5ea0653406d8291d749f99a6f879d1a145c52df431f0af9244dc3ec342e0b112",
+    "/Users/makark/showtime/assets/showtime/provenance.json": "32ea7675d3a2155b17b07ac94f99dc6b33ea91536ed767cd66447f685c7a4c22"
+  }
+}

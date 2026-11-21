@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "scope": "product_delivery",
+  "output": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/composed.mp4",
+  "output_sha256": "96255f3a73e7dd91d49a5fa5a50bdaf68861e6a1d145237d9453b2a2b7e5509a",
+  "passed": true,
+  "render_cadence_60fps": "passed",
+  "motion_fidelity": "unverified",
+  "policy": {
+    "target_fps": "60/1",
+    "timestamp_tolerance_ms": 0.5,
+    "observed_rate_tolerance_fps": 0.005,
+    "input_capture_may_be_vfr": true,
+    "input_capture_fps_requirement": null,
+    "repeated_output_frames_allowed": true,
+    "minimum_decoded_frames": 2
+  },
+  "failures": [],
+  "limitations": [
+    "Only the supplied file is measured.",
+    "PTS and durations establish output frame timing, not unique visual states or motion fidelity.",
+    "Exporting at 60 fps does not reconstruct motion absent from the input recording.",
+    "This audit invokes ffprobe only; it never applies fps filters, interpolation or timestamp repair."
+  ],
+  "output_bytes": 7038553,
+  "stream": {
+    "codec_name": "h264",
+    "width": 1920,
+    "height": 1920,
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "time_base": "1/15360",
+    "duration_ts": 354048,
+    "duration": "23.050000",
+    "nb_frames": "1383",
+    "disposition": {
+      "default": 1,
+      "dub": 0,
+      "original": 0,
+      "comment": 0,
+      "lyrics": 0,
+      "karaoke": 0,
+      "forced": 0,
+      "hearing_impaired": 0,
+      "visual_impaired": 0,
+      "clean_effects": 0,
+      "attached_pic": 0,
+      "timed_thumbnails": 0,
+      "non_diegetic": 0,
+      "captions": 0,
+      "descriptions": 0,
+      "metadata": 0,
+      "dependent": 0,
+      "still_image": 0,
+      "multilayer": 0
+    },
+    "tags": {
+      "language": "und",
+      "handler_name": "VideoHandler",
+      "encoder": "Lavc63.1.102 libx264"
+    }
+  },
+  "decoded_frame_count": 1383,
+  "frame_duration_ms": {
+    "min": 16.666666666666668,
+    "max": 16.666666666666668,
+    "last": 16.666666666666668
+  },
+  "timing": {
+    "first_pts": 0.0,
+    "last_pts": 23.033333333333335,
+    "first_pts_offset_normalized": true,
+    "observed_fps": 60.0,
+    "interval_min_ms": 16.666666666666668,
+    "interval_max_ms": 16.666666666666668,
+    "maximum_step_error_ms": 0.0,
+    "maximum_grid_error_ms": 0.0,
+    "interval_violations": 0,
+    "gap_count": 0,
+    "gap_examples": []
+  },
+  "delivery_policy": {
+    "minimum_seconds": null,
+    "maximum_seconds": null,
+    "minimum_decoded_frames": 1,
+    "maximum_decoded_frames": null,
+    "target_fps": "60/1",
+    "boundaries_inclusive": true,
+    "automatic_clamp_or_stretch": false
+  },
+  "delivery_duration": {
+    "status": "passed",
+    "decoded_frame_count": 1383,
+    "frame_count_in_range": true,
+    "seconds_at_verified_60fps": 23.05,
+    "requires_verified_60fps": true
+  },
+  "delivery_format": {
+    "codec": "h264",
+    "pix_fmt": "yuv420p",
+    "extra_streams": [],
+    "sample_aspect_ratio": null
+  },
+  "content": {
+    "luma_range": 252,
+    "changing_frames": 824
+  },
+  "tap_rings": [
+    {
+      "id": "answer",
+      "contact_frame": 84,
+      "reference_frame": 58,
+      "observed_change": 44.2,
+      "expected_change": 29.32,
+      "status": "passed"
+    },
+    {
+      "id": "submit",
+      "contact_frame": 141,
+      "reference_frame": 115,
+      "observed_change": 82.08,
+      "expected_change": 45.41,
+      "status": "passed"
+    }
+  ]
+}

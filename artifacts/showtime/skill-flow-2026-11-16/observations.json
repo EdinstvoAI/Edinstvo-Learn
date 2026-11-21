@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "capture_sha256": "ae89bb03de34aa3d9e250b89d0bc9a4de1004eedc96daa293e64e11dc09249d4",
+  "review_status": "reviewed",
+  "steps": [
+    {"event_id": "answer", "response_start": 7.0667, "transition_end": 7.1, "result_ready": 7.1, "overlays_clear": 7.0667, "read_seconds": 0.75},
+    {"event_id": "submit", "response_start": 8.0167, "transition_end": 27, "result_ready": 27, "overlays_clear": 27, "read_seconds": 1.65}
+  ],
+  "protected_ranges": [
+    {"start": 5.6, "end": 28.65, "reason": "Preserve the answer, Lottie transition, complete sector growth, correction and final reading hold."}
+  ]
+}

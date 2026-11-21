@@ -1,0 +1,42 @@
+{
+  "schema_version": 2,
+  "kind": "scenario",
+  "scenario_id": "skill-flow-2026-11-16",
+  "content": {
+    "language": "ru",
+    "story": {
+      "context": "A mentee is answering the final question of the one-time soft-skills assessment.",
+      "entry_point": "The last answer is submitted and the assessment completion animation carries the mentee into the skills screen.",
+      "action": "One skill sector grows with the dimensional celebration, then another mentor correction makes a sector retract smoothly.",
+      "payoff": "The mentee immediately understands both progress and correction on the same living skill wheel.",
+      "loop": "The camera settles on the complete phone and returns to the final-question context without implying that progress was undone."
+    },
+    "scene_plan": {
+      "setting": "The real Edinstvo Learn web app running in Mobile Safari on an iPhone 17 Pro simulator.",
+      "actors": [
+        "A mentee completing the assessment",
+        "A mentor whose score changes are already queued in the mentee profile"
+      ],
+      "supporting_content": [
+        "The final assessment question and its real answer controls",
+        "The existing full-screen Lottie completion scene",
+        "The soft-skills wheel with a growth event and a decrease event"
+      ],
+      "continuity": "The same mentee account, skill values and white mobile-first interface remain visible throughout."
+    },
+    "composition": {
+      "device": "iPhone 17 Pro Silver",
+      "background": "Pastel",
+      "framing": "Full phone with a smooth editorial focus toward the active skill wheel and back",
+      "output": "1920x1920 constant 60 fps MP4"
+    },
+    "timing_seconds": {
+      "assessment": [0, 3],
+      "transition": [3, 6],
+      "growth": [6, 10],
+      "decrease": [10, 13],
+      "settle_and_loop": [13, 16]
+    }
+  },
+  "files": []
+}

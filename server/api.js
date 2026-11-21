@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { parseCalendar } from './calendar-import.js';
 import { openDatabase } from './database.js';
 import { scoreAssessment } from './assessment.js';
-import { ApiError, allowed, lowerText, projectSources, requireInput, shortText, taskSchedule, uuid } from './input.js';
+import { ApiError, allowed, cardStickers, lowerText, projectSources, requireInput, shortText, taskSchedule, uuid } from './input.js';
 import { attemptLimiter, mentorCredentialsValid, mentorLoginConfigured } from './mentor-login.js';
 import { accessCode as dailyCode, hash, safeEqual, telegramPhone, telegramUser, telegramWelcome } from './telegram.js';
 
@@ -292,6 +292,19 @@ export function makeApi(env, database = env.DATABASE_URL ? openDatabase(env.DATA
         }
         await client.query('UPDATE accounts SET profile = $1 WHERE id = $2', [profile, person]);
         return { ids: confirmed };
+      } else if (action === 'archive-project-comment') {
+        // Менти убирает прочитанный комментарий в архив и может вернуть его обратно. Архив считается прочитанным.
+        allowed(!mentor);
+        const project = profile.projects?.find((item) => item.id === data.projectId);
+        const comment = project?.comments?.find((item) => item.id === data.id);
+        requireInput(comment && typeof data.archived === 'boolean');
+        const now = new Date().toISOString();
+        comment.readAt ??= now;
+        if (data.archived) comment.archivedAt ??= now;
+        else delete comment.archivedAt;
+      } else if (action === 'card-stickers') {
+        allowed(!mentor);
+        profile.cardStickers = cardStickers(data.stickers);
       } else if (action === 'project-comment') {
         allowed(mentor);
         const project = profile.projects?.find((item) => item.id === data.projectId);

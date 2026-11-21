@@ -84,3 +84,44 @@ export function shuffledAnswers(questionIndex, answers) {
   }
   return order.map((index) => ({ index, answer: answers[index] }));
 }
+
+// Роудмап проекта на месяц: недели с понедельника, которые пересекают месяц, и задачи каждой недели.
+// Многодневная задача попадает в неделю, где она начинается, или в первую неделю месяца, если началась раньше.
+export function monthRoadmap(tasks, day, currentDay) {
+  const first = day.slice(0, 7) + '-01';
+  const next = shiftMonth(first, 1);
+  const last = shiftDate(next, -1);
+  const inMonth = tasks.filter((task) => startOf(task) <= last && endOf(task) >= first)
+    .sort((a, b) => startOf(a).localeCompare(startOf(b)) || a.time.localeCompare(b.time));
+  const ranges = [];
+  for (let start = weekStart(first); start <= last; start = shiftDate(start, 7)) {
+    const end = shiftDate(start, 6);
+    ranges.push([start < first ? first : start, end > last ? last : end]);
+  }
+  // Обрывки недель короче четырёх дней на краях месяца присоединяем к соседней неделе.
+  const length = ([from, to]) => (parseDate(to) - parseDate(from)) / 864e5 + 1;
+  if (ranges.length > 1 && length(ranges[0]) < 4) ranges.splice(0, 2, [ranges[0][0], ranges[1][1]]);
+  if (ranges.length > 1 && length(ranges.at(-1)) < 4) ranges.splice(-2, 2, [ranges.at(-2)[0], ranges.at(-1)[1]]);
+  const weeks = [];
+  for (const [from, to] of ranges) {
+    weeks.push({
+      index: weeks.length + 1, start: from, end: to,
+      state: currentDay > to ? 'past' : currentDay < from ? 'future' : 'current',
+      tasks: inMonth.filter((task) => {
+        const anchor = startOf(task) < first ? first : startOf(task);
+        return anchor >= from && anchor <= to;
+      }),
+    });
+  }
+  const passed = inMonth.filter((task) => task.done || endOf(task) < currentDay).length;
+  const days = Number(last.slice(8));
+  const elapsed = currentDay < first ? 0 : currentDay > last ? days : Number(currentDay.slice(8));
+  const busyDays = [...new Set(inMonth.flatMap((task) => {
+    const result = [];
+    for (let date = startOf(task) < first ? first : startOf(task); date <= endOf(task) && date <= last; date = shiftDate(date, 1)) {
+      result.push(Number(date.slice(8)));
+    }
+    return result;
+  }))].sort((a, b) => a - b);
+  return { first, last, days, elapsed, weeks, total: inMonth.length, passed, busyDays };
+}

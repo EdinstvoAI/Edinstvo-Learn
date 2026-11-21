@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "basis": "frames_only",
+  "reviewer": "frame_review",
+  "reference": "Independent ordered-frame pass and follow-up in Codex",
+  "answers": {
+    "context": "Question 30 of 30 asks how the learner tackles a daunting task.",
+    "entry_point": "The third answer is visibly selected and the save button turns black.",
+    "action": "Purple rounded shapes, a lavender sphere and a pink burst fill the screen. Stills cannot establish the trigger or timing.",
+    "result": "Liza sees a green soft-skills radar. The correction frame shows a coral wedge near five o’clock; the bottom navigation obscures the correction text.",
+    "believability": "The skills dashboard is a plausible destination after the assessment.",
+    "continuity": "The mobile shell and 09:41 status bar remain consistent through the quiz, illustration and skills result."
+  }
+}

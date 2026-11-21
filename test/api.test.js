@@ -201,3 +201,50 @@ test('Telegram webhook welcomes /start in private chats and requires its secret'
   update.message.chat.type = 'group';
   assert.deepEqual((await call(makeApi(env), post(endpoint, update, headers))).data, {});
 });
+
+const commentId = 'c3b0a1e2-4d5f-4a6b-8c7d-9e0f1a2b3c4d';
+
+test('mentee archives a comment, marks it read and can restore it; the mentor cannot', async () => {
+  const profile = { projects: [{ id: projectId, comments: [{ id: commentId, text: 'review' }] }] };
+  let db = fakeDatabase(mentee, profile);
+  let result = await call(makeApi({}, db), post(projectRoute('archive-project-comment'), { projectId, id: commentId, archived: true }));
+  assert.equal(result.status, 200);
+  const archived = db.queries.at(-1).values[0].projects[0].comments[0];
+  assert.ok(archived.archivedAt && archived.readAt);
+
+  db = fakeDatabase(mentee, { projects: [{ id: projectId, comments: [archived] }] });
+  result = await call(makeApi({}, db), post(projectRoute('archive-project-comment'), { projectId, id: commentId, archived: false }));
+  assert.equal(result.status, 200);
+  const restored = db.queries.at(-1).values[0].projects[0].comments[0];
+  assert.equal(restored.archivedAt, undefined);
+  assert.equal(restored.readAt, archived.readAt);
+
+  db = fakeDatabase(mentor, profile);
+  result = await call(makeApi({}, db), post(projectRoute('archive-project-comment'), { projectId, id: commentId, archived: true }));
+  assert.equal(result.status, 403);
+  db = fakeDatabase(mentee, profile);
+  result = await call(makeApi({}, db), post(projectRoute('archive-project-comment'), { projectId, id: projectId, archived: true }));
+  assert.equal(result.status, 422);
+});
+
+test('card stickers are saved for the mentee only, clamped and limited to the catalog', async () => {
+  let db = fakeDatabase(mentee, {});
+  let result = await call(makeApi({}, db), post(projectRoute('card-stickers'), {
+    stickers: [{ type: 'figma', x: 140, y: -5, rotate: 90, scale: 3 }, { type: 'claude', x: 50.04, y: 20, rotate: -10, scale: 1 }],
+  }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(db.queries.at(-1).values[0].cardStickers, [
+    { type: 'figma', x: 100, y: 0, rotate: 40, scale: 1.6 },
+    { type: 'claude', x: 50, y: 20, rotate: -10, scale: 1 },
+  ]);
+  for (const [actor, stickers, status] of [
+    [mentor, [], 403],
+    [mentee, [{ type: 'unknown', x: 1, y: 1, rotate: 0, scale: 1 }], 422],
+    [mentee, [{ type: 'star', x: '1', y: 1, rotate: 0, scale: 1 }], 422],
+    [mentee, Array.from({ length: 13 }, () => ({ type: 'star', x: 1, y: 1, rotate: 0, scale: 1 })), 422],
+  ]) {
+    db = fakeDatabase(actor, {});
+    result = await call(makeApi({}, db), post(projectRoute('card-stickers'), { stickers }));
+    assert.equal(result.status, status);
+  }
+});

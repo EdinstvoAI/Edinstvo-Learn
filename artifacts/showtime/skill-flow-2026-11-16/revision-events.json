@@ -1,0 +1,24 @@
+{
+  "coordinate_space": {
+    "width": 402,
+    "height": 874
+  },
+  "events": [
+    {
+      "id": "answer",
+      "type": "tap",
+      "time": 1.4229999999999996,
+      "x": 200,
+      "y": 438,
+      "anchor_frame": 25
+    },
+    {
+      "id": "submit",
+      "type": "tap",
+      "time": 3.973,
+      "x": 200,
+      "y": 580,
+      "anchor_frame": 25
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "scenario",
+  "scenario_id": "skill-flow-2026-11-16",
+  "manifest_sha256": "34540ce64e435254a4a7759ebd00e366a65609b239b956d368a4425205e10909",
+  "files": [],
+  "scenario_approval_sha256": null,
+  "approved_at": "2026-11-16T20:28:14.332093+00:00",
+  "human_decision": {
+    "source": "Codex chat",
+    "reference": "user message approving the iPhone 17 Pro substitution and production",
+    "quote": "ДЕЛАЙ БЛЯТЬ И ЖЭКОНОМНО ПЛЗ",
+    "decision": "approved",
+    "manifest_sha256": "34540ce64e435254a4a7759ebd00e366a65609b239b956d368a4425205e10909"
+  }
+}

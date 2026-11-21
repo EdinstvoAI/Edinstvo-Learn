@@ -1,0 +1,32 @@
+{
+  "simulator": "70B169BC-1696-4395-B23A-02AA6E8ACDA7",
+  "output": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/raw.mp4",
+  "recorder_pid": 31000,
+  "human_review": {
+    "approved": true,
+    "stage": "recording",
+    "scenario_sha256": "34540ce64e435254a4a7759ebd00e366a65609b239b956d368a4425205e10909",
+    "scenario_approval_sha256": "cbbdd5da3ea59987e9cda8fb0f4d285c6a1bb8f2d13b601e360880d63a98feb3",
+    "story_materials_checked": true,
+    "visual_quality_automatically_verified": false,
+    "authorization_kind": "approved_scenario",
+    "target_user_reviewed": false,
+    "profile_sha256": "b106f2c878e990f9f45bc923c4a133fd7c527484ea562c53d521925cb3e0bfd5",
+    "profile_bound_sha256": "812bd2c8893d3dde37d7f5c6637231f61ba8ea0b763d3393bc06b3e47e47ba13",
+    "prepared_sha256": "c3f5ed213617796e4ea01110b453403b543110951e8fdf61fb362d4879747867"
+  },
+  "purpose": "final",
+  "request_ms": 1794894716247.678,
+  "ready_ms": 1794894717062.532,
+  "stop_requested_ms": 1794894744897.315,
+  "tail_sentinel": true,
+  "sentinel_requested_ms": 1794894747918.117,
+  "clock_note": "Video origin is simctl's Recording started log marker. Command timings and marker latency are not physical touch-down measurements.",
+  "simctl_pid": 31005,
+  "ready_uptime_ns": 40555338522250,
+  "sentinel_completed_ms": 1794894748874.566,
+  "exit_code": 0,
+  "completed_ms": 1794894749454.247,
+  "completed_uptime_ns": 40587729958166,
+  "wall_clock_drift_seconds": 0.0002791718906252072
+}

@@ -1,0 +1,311 @@
+{
+  "source": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/raw.mp4",
+  "source_sha256": "ae89bb03de34aa3d9e250b89d0bc9a4de1004eedc96daa293e64e11dc09249d4",
+  "event_log": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/aligned-actions.json",
+  "event_log_sha256": "15e714180762655f042a8a0d92a304795e34a4fc7925e1423f0ef8527919be89",
+  "observations": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/observations.json",
+  "observations_sha256": "461d6ad09250dd18bfcf42a347e6a4f4472b2d28271a48213ad1d5655aa11faa",
+  "method": "Reviewed outcomes: completed transitions, visible results, cleared overlays and reading time; protect continuous motion and gestures.",
+  "native_speed": 1.0,
+  "sampling": "VFR sampled at 60 fps by presentation time; native speed, no motion interpolation",
+  "source_frame_times": {
+    "frames": 879,
+    "decode": "presentation timestamps (DTS ignored)",
+    "status": "passed"
+  },
+  "normalized_capture": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/event-edit/capture-60fps.mp4",
+  "normalized_capture_sha256": "085bbb39c41d33a565a1e262f140633ab451ff284eeaad24bf859f871fdce719",
+  "segments": [
+    {
+      "source_in": 5.6,
+      "source_out": 28.65,
+      "output_in": 0.0,
+      "output_frames": 1383,
+      "speed": 1.0
+    }
+  ],
+  "state_checks": {
+    "capture_sha256": "ae89bb03de34aa3d9e250b89d0bc9a4de1004eedc96daa293e64e11dc09249d4",
+    "review_status": "reviewed",
+    "observations_kind": "agent_visual_observations_not_human_approval",
+    "fps": 60,
+    "source_duration": 31.985,
+    "available_frames": 1919,
+    "lead_seconds": 0.4166666666666667,
+    "native_speed": 1.0,
+    "frame_interval": "[first,last)",
+    "steps": [
+      {
+        "event_id": "answer",
+        "source_action": [
+          7.0067,
+          7.0667
+        ],
+        "response_start": 7.0667,
+        "transition_end": 7.1,
+        "result_ready": 7.1,
+        "overlays_clear": 7.0667,
+        "read_seconds": 0.75,
+        "hold_start": 7.1,
+        "required_end": 7.85,
+        "frames": [
+          395,
+          471
+        ]
+      },
+      {
+        "event_id": "submit",
+        "source_action": [
+          7.9567000000000005,
+          8.0167
+        ],
+        "response_start": 8.0167,
+        "transition_end": 27.0,
+        "result_ready": 27.0,
+        "overlays_clear": 27.0,
+        "read_seconds": 1.65,
+        "hold_start": 27.0,
+        "required_end": 28.65,
+        "frames": [
+          452,
+          1719
+        ]
+      }
+    ],
+    "protected_ranges": [
+      {
+        "start": 5.6,
+        "end": 28.65,
+        "reason": "Preserve the answer, Lottie transition, complete sector growth, correction and final reading hold.",
+        "frames": [
+          336,
+          1719
+        ]
+      },
+      {
+        "start": 6.583333333333333,
+        "end": 7.266666666666667,
+        "reason": "Complete gesture: answer",
+        "frames": [
+          395,
+          436
+        ]
+      },
+      {
+        "start": 7.533333333333333,
+        "end": 8.216666666666667,
+        "reason": "Complete gesture: submit",
+        "frames": [
+          452,
+          493
+        ]
+      }
+    ],
+    "all_actions_preserved": true,
+    "all_result_holds_preserved": true,
+    "protected_ranges_preserved": true,
+    "cuts": [],
+    "output_frames": 1383
+  },
+  "capture_clock_validation": {
+    "wall_clock_drift_seconds": 0.0002791718906252072,
+    "physical_touch_down_measured": false,
+    "capture_bound": true,
+    "legacy_unbound_event_count": 0
+  },
+  "frames": 1383,
+  "duration": 23.05,
+  "output_sha256": "edbb1db06fbe87ba291c64e3a579a12580d633dbe192e1f171e5f195d6253e26",
+  "output_probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_type": "video",
+        "width": 1206,
+        "height": 2622,
+        "avg_frame_rate": "60/1",
+        "time_base": "1/15360",
+        "duration": "23.050000",
+        "nb_frames": "1383"
+      }
+    ],
+    "format": {
+      "duration": "23.050000"
+    }
+  },
+  "visual_review": {
+    "schema_version": 1,
+    "status": "needs_visual_review",
+    "capture": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/event-edit/capture-60fps.mp4",
+    "capture_sha256": "085bbb39c41d33a565a1e262f140633ab451ff284eeaad24bf859f871fdce719",
+    "frame_index_space": "normalized_capture",
+    "observations_capture_sha256": "ae89bb03de34aa3d9e250b89d0bc9a4de1004eedc96daa293e64e11dc09249d4",
+    "source_probe": {
+      "width": 1206,
+      "height": 2622,
+      "r_frame_rate": "60/1",
+      "avg_frame_rate": "60/1",
+      "disposition": {
+        "default": 1,
+        "dub": 0,
+        "original": 0,
+        "comment": 0,
+        "lyrics": 0,
+        "karaoke": 0,
+        "forced": 0,
+        "hearing_impaired": 0,
+        "visual_impaired": 0,
+        "clean_effects": 0,
+        "attached_pic": 0,
+        "timed_thumbnails": 0,
+        "non_diegetic": 0,
+        "captions": 0,
+        "descriptions": 0,
+        "metadata": 0,
+        "dependent": 0,
+        "still_image": 0,
+        "multilayer": 0
+      },
+      "tags": {
+        "language": "und",
+        "handler_name": "Core Media Video",
+        "encoder": "Lavc63.1.102 libx264"
+      }
+    },
+    "source_frame_count": 1943,
+    "timeline_fps": 60.0,
+    "normalized_grid_validation": "passed",
+    "observation_review_status": "reviewed",
+    "intervals": [
+      [
+        336,
+        1719
+      ]
+    ],
+    "evidence_count": 9,
+    "unique_source_frame_count": 5,
+    "page_count": 1,
+    "images_per_page_max": 80,
+    "contact_sheets": [
+      "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-001.jpg"
+    ],
+    "report": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review.json",
+    "evidence": [
+      {
+        "kind": "interval_start",
+        "source_frame": 336,
+        "label": "Interval 1 start",
+        "interval_index": 0,
+        "source_seconds": 5.6,
+        "timeline_seconds": 5.6,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000336.jpg",
+        "page": 1
+      },
+      {
+        "kind": "interval_end",
+        "source_frame": 1718,
+        "label": "Interval 1 end",
+        "interval_index": 0,
+        "source_seconds": 28.633333,
+        "timeline_seconds": 28.633333333333333,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001718.jpg",
+        "page": 1
+      },
+      {
+        "kind": "result_ready",
+        "source_frame": 426,
+        "label": "answer: Result visible",
+        "event_id": "answer",
+        "observation_seconds": 7.1,
+        "source_seconds": 7.1,
+        "timeline_seconds": 7.1,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000426.jpg",
+        "page": 1
+      },
+      {
+        "kind": "overlays_clear",
+        "source_frame": 425,
+        "label": "answer: Overlays clear",
+        "event_id": "answer",
+        "observation_seconds": 7.0667,
+        "source_seconds": 7.083333,
+        "timeline_seconds": 7.083333333333333,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000425.jpg",
+        "page": 1
+      },
+      {
+        "kind": "result_ready",
+        "source_frame": 1620,
+        "label": "submit: Result visible",
+        "event_id": "submit",
+        "observation_seconds": 27.0,
+        "source_seconds": 27.0,
+        "timeline_seconds": 27.0,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001620.jpg",
+        "page": 1
+      },
+      {
+        "kind": "overlays_clear",
+        "source_frame": 1620,
+        "label": "submit: Overlays clear",
+        "event_id": "submit",
+        "observation_seconds": 27.0,
+        "source_seconds": 27.0,
+        "timeline_seconds": 27.0,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001620.jpg",
+        "page": 1
+      },
+      {
+        "kind": "loop_end",
+        "source_frame": 1718,
+        "label": "Loop seam — manual review, seamless loop not guaranteed end",
+        "source_seconds": 28.633333,
+        "timeline_seconds": 28.633333333333333,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001718.jpg",
+        "page": 1
+      },
+      {
+        "kind": "loop_start",
+        "source_frame": 336,
+        "label": "Loop seam — manual review, seamless loop not guaranteed start",
+        "source_seconds": 5.6,
+        "timeline_seconds": 5.6,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000336.jpg",
+        "page": 1
+      },
+      {
+        "kind": "final_frame",
+        "source_frame": 1718,
+        "label": "Last frame of the edit",
+        "source_seconds": 28.633333,
+        "timeline_seconds": 28.633333333333333,
+        "retained": true,
+        "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001718.jpg",
+        "page": 1
+      }
+    ],
+    "loop_seam": {
+      "status": "needs_visual_review",
+      "note": "Loop seam — manual review, seamless loop not guaranteed",
+      "end_frame": 1718,
+      "start_frame": 336
+    },
+    "manual_review_required": "Watch each cut and the return to the opening frame to check continuity.",
+    "limitations": [
+      "Review the video to judge visual quality and source motion.",
+      "These frames come from the normalized video. A variable-rate source can produce repeated frames.",
+      "The result_ready and overlays_clear frames come from the reviewer's observations.",
+      "Watch the animation across each cut to check for jumps."
+    ]
+  },
+  "visual_cut_and_touch_alignment_reviewed": false
+}

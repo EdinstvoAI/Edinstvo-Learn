@@ -1,0 +1,180 @@
+{
+  "step": "tap -x 200 -y 438",
+  "steps": [
+    "tap -x 200 -y 438"
+  ],
+  "tap_style": "physical",
+  "command_start_ms": 1794894718406.313,
+  "command_end_ms": 1794894720203.986,
+  "exit_code": 0,
+  "lines": [
+    {
+      "ms": 1794894718847.777,
+      "text": "CoreSimulator: Already loaded, skipping"
+    },
+    {
+      "ms": 1794894718849.272,
+      "text": "CoreSimulator: SimDevice has correct path of /Library/Developer"
+    },
+    {
+      "ms": 1794894718849.54,
+      "text": "Loaded All Private Frameworks [CoreSimulator]"
+    },
+    {
+      "ms": 1794894718858.836,
+      "text": "Performing global setup..."
+    },
+    {
+      "ms": 1794894718858.84,
+      "text": "Checking Xcode availability..."
+    },
+    {
+      "ms": 1794894718863.45,
+      "text": "Xcode is available at: /Applications/Xcode.app/Contents/Developer"
+    },
+    {
+      "ms": 1794894718863.466,
+      "text": "Loading essential private frameworks via FBSimulatorControlFrameworkLoader..."
+    },
+    {
+      "ms": 1794894718863.469,
+      "text": "Successfully loaded essential private frameworks (according to FBSimulatorControlFrameworkLoader)."
+    },
+    {
+      "ms": 1794894718863.47,
+      "text": "Loading Xcode frameworks (including SimulatorKit)..."
+    },
+    {
+      "ms": 1794894718867.134,
+      "text": "SimulatorKit: Loading from /Applications/Xcode.app/Contents/SharedFrameworks/SimulatorKit.framework"
+    },
+    {
+      "ms": 1794894718885.796,
+      "text": "SimulatorKit: Successfully loaded"
+    },
+    {
+      "ms": 1794894718885.833,
+      "text": "Loaded All Private Frameworks [SimulatorKit]"
+    },
+    {
+      "ms": 1794894718885.84,
+      "text": "Successfully loaded Xcode frameworks."
+    },
+    {
+      "ms": 1794894718885.852,
+      "text": "Global setup complete."
+    },
+    {
+      "ms": 1794894718886.887,
+      "text": "Performing global setup..."
+    },
+    {
+      "ms": 1794894718886.89,
+      "text": "Checking Xcode availability..."
+    },
+    {
+      "ms": 1794894718892.118,
+      "text": "Xcode is available at: /Applications/Xcode.app/Contents/Developer"
+    },
+    {
+      "ms": 1794894718892.143,
+      "text": "Loading essential private frameworks via FBSimulatorControlFrameworkLoader..."
+    },
+    {
+      "ms": 1794894718892.144,
+      "text": "Successfully loaded essential private frameworks (according to FBSimulatorControlFrameworkLoader)."
+    },
+    {
+      "ms": 1794894718892.144,
+      "text": "Loading Xcode frameworks (including SimulatorKit)..."
+    },
+    {
+      "ms": 1794894718892.145,
+      "text": "Successfully loaded Xcode frameworks."
+    },
+    {
+      "ms": 1794894718892.148,
+      "text": "Global setup complete."
+    },
+    {
+      "ms": 1794894719203.358,
+      "text": "Loading private frameworks for HID operations..."
+    },
+    {
+      "ms": 1794894719203.391,
+      "text": "Private frameworks loaded successfully."
+    },
+    {
+      "ms": 1794894719203.423,
+      "text": "FBSimulatorSet obtained."
+    },
+    {
+      "ms": 1794894719204.078,
+      "text": "Target (FBSimulator) obtained: 70B169BC-1696-4395-B23A-02AA6E8ACDA7"
+    },
+    {
+      "ms": 1794894719204.092,
+      "text": "Simulator name: iPhone 17 Pro"
+    },
+    {
+      "ms": 1794894719204.094,
+      "text": "Simulator state verified: booted"
+    },
+    {
+      "ms": 1794894719206.474,
+      "text": "Creating new HID connection for simulator 70B169BC-1696-4395-B23A-02AA6E8ACDA7..."
+    },
+    {
+      "ms": 1794894719235.221,
+      "text": "HID connection created and cached for simulator 70B169BC-1696-4395-B23A-02AA6E8ACDA7"
+    },
+    {
+      "ms": 1794894719240.897,
+      "text": "[70B169BC-1696-4395-B23A-02AA6E8ACDA7] AccessibilityPlatformTranslation: Already loaded, skipping"
+    },
+    {
+      "ms": 1794894719242.861,
+      "text": "[70B169BC-1696-4395-B23A-02AA6E8ACDA7] AccessibilityPlatformTranslation: AXPTranslationObject has correct path of /System/Library"
+    },
+    {
+      "ms": 1794894719242.91,
+      "text": "[70B169BC-1696-4395-B23A-02AA6E8ACDA7] Loaded All Private Frameworks [AccessibilityPlatformTranslation]"
+    },
+    {
+      "ms": 1794894719911.726,
+      "text": "Orientation probe: uiOrientation=1"
+    },
+    {
+      "ms": 1794894719911.753,
+      "text": "Detected simulator UI orientation: portrait"
+    },
+    {
+      "ms": 1794894719912.127,
+      "text": "Performing HID event..."
+    },
+    {
+      "ms": 1794894719912.185,
+      "text": "Sending Touch <hidden>"
+    },
+    {
+      "ms": 1794894719912.284,
+      "text": "Delay 0.25s"
+    },
+    {
+      "ms": 1794894720167.181,
+      "text": "Sending Touch <hidden>"
+    },
+    {
+      "ms": 1794894720167.263,
+      "text": "HID event performed successfully."
+    },
+    {
+      "ms": 1794894720167.383,
+      "text": "Applying stabilization delay of 25ms..."
+    },
+    {
+      "ms": 1794894720197.422,
+      "text": "\u2713 Batch completed successfully (1 steps)"
+    }
+  ]
+}

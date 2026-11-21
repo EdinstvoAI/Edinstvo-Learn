@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "status": "needs_visual_review",
+  "capture": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/event-edit/capture-60fps.mp4",
+  "capture_sha256": "085bbb39c41d33a565a1e262f140633ab451ff284eeaad24bf859f871fdce719",
+  "frame_index_space": "normalized_capture",
+  "observations_capture_sha256": "ae89bb03de34aa3d9e250b89d0bc9a4de1004eedc96daa293e64e11dc09249d4",
+  "source_probe": {
+    "width": 1206,
+    "height": 2622,
+    "r_frame_rate": "60/1",
+    "avg_frame_rate": "60/1",
+    "disposition": {
+      "default": 1,
+      "dub": 0,
+      "original": 0,
+      "comment": 0,
+      "lyrics": 0,
+      "karaoke": 0,
+      "forced": 0,
+      "hearing_impaired": 0,
+      "visual_impaired": 0,
+      "clean_effects": 0,
+      "attached_pic": 0,
+      "timed_thumbnails": 0,
+      "non_diegetic": 0,
+      "captions": 0,
+      "descriptions": 0,
+      "metadata": 0,
+      "dependent": 0,
+      "still_image": 0,
+      "multilayer": 0
+    },
+    "tags": {
+      "language": "und",
+      "handler_name": "Core Media Video",
+      "encoder": "Lavc63.1.102 libx264"
+    }
+  },
+  "source_frame_count": 1943,
+  "timeline_fps": 60.0,
+  "normalized_grid_validation": "passed",
+  "observation_review_status": "reviewed",
+  "intervals": [
+    [
+      336,
+      1719
+    ]
+  ],
+  "evidence_count": 9,
+  "unique_source_frame_count": 5,
+  "page_count": 1,
+  "images_per_page_max": 80,
+  "contact_sheets": [
+    "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-001.jpg"
+  ],
+  "report": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review.json",
+  "evidence": [
+    {
+      "kind": "interval_start",
+      "source_frame": 336,
+      "label": "Interval 1 start",
+      "interval_index": 0,
+      "source_seconds": 5.6,
+      "timeline_seconds": 5.6,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000336.jpg",
+      "page": 1
+    },
+    {
+      "kind": "interval_end",
+      "source_frame": 1718,
+      "label": "Interval 1 end",
+      "interval_index": 0,
+      "source_seconds": 28.633333,
+      "timeline_seconds": 28.633333333333333,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001718.jpg",
+      "page": 1
+    },
+    {
+      "kind": "result_ready",
+      "source_frame": 426,
+      "label": "answer: Result visible",
+      "event_id": "answer",
+      "observation_seconds": 7.1,
+      "source_seconds": 7.1,
+      "timeline_seconds": 7.1,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000426.jpg",
+      "page": 1
+    },
+    {
+      "kind": "overlays_clear",
+      "source_frame": 425,
+      "label": "answer: Overlays clear",
+      "event_id": "answer",
+      "observation_seconds": 7.0667,
+      "source_seconds": 7.083333,
+      "timeline_seconds": 7.083333333333333,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000425.jpg",
+      "page": 1
+    },
+    {
+      "kind": "result_ready",
+      "source_frame": 1620,
+      "label": "submit: Result visible",
+      "event_id": "submit",
+      "observation_seconds": 27.0,
+      "source_seconds": 27.0,
+      "timeline_seconds": 27.0,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001620.jpg",
+      "page": 1
+    },
+    {
+      "kind": "overlays_clear",
+      "source_frame": 1620,
+      "label": "submit: Overlays clear",
+      "event_id": "submit",
+      "observation_seconds": 27.0,
+      "source_seconds": 27.0,
+      "timeline_seconds": 27.0,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001620.jpg",
+      "page": 1
+    },
+    {
+      "kind": "loop_end",
+      "source_frame": 1718,
+      "label": "Loop seam — manual review, seamless loop not guaranteed end",
+      "source_seconds": 28.633333,
+      "timeline_seconds": 28.633333333333333,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001718.jpg",
+      "page": 1
+    },
+    {
+      "kind": "loop_start",
+      "source_frame": 336,
+      "label": "Loop seam — manual review, seamless loop not guaranteed start",
+      "source_seconds": 5.6,
+      "timeline_seconds": 5.6,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00000336.jpg",
+      "page": 1
+    },
+    {
+      "kind": "final_frame",
+      "source_frame": 1718,
+      "label": "Last frame of the edit",
+      "source_seconds": 28.633333,
+      "timeline_seconds": 28.633333333333333,
+      "retained": true,
+      "image": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/edit/edit-review/edit-review-frames/source-00001718.jpg",
+      "page": 1
+    }
+  ],
+  "loop_seam": {
+    "status": "needs_visual_review",
+    "note": "Loop seam — manual review, seamless loop not guaranteed",
+    "end_frame": 1718,
+    "start_frame": 336
+  },
+  "manual_review_required": "Watch each cut and the return to the opening frame to check continuity.",
+  "limitations": [
+    "Review the video to judge visual quality and source motion.",
+    "These frames come from the normalized video. A variable-rate source can produce repeated frames.",
+    "The result_ready and overlays_clear frames come from the reviewer's observations.",
+    "Watch the animation across each cut to check for jumps."
+  ]
+}

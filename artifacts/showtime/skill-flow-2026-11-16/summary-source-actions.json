@@ -1,0 +1,42 @@
+{
+  "coordinate_space": {
+    "width": 402.0,
+    "height": 874.0
+  },
+  "clock_note": "AXe HID dispatch log timestamps; not measured physical touch-down. Native UI timing review is required.",
+  "events": [
+    {
+      "id": "answer",
+      "type": "tap",
+      "tap_style": "physical",
+      "source_start": 3.83479296875,
+      "source_end": 4.10176611328125,
+      "alignment": "axe_hid_dispatch_log; physical_touch_down_not_measured",
+      "dispatch_log": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/summary-source-actions-answer.dispatch.json",
+      "point": [
+        200.0,
+        438.0
+      ]
+    },
+    {
+      "id": "submit",
+      "type": "tap",
+      "tap_style": "physical",
+      "source_start": 6.5793330078125,
+      "source_end": 6.84060498046875,
+      "alignment": "axe_hid_dispatch_log; physical_touch_down_not_measured",
+      "dispatch_log": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/summary-source-actions-submit.dispatch.json",
+      "point": [
+        200.0,
+        580.0
+      ]
+    }
+  ],
+  "capture_ref": {
+    "clock_path": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/summary-source.clock.json",
+    "output": "/Users/makark/Documents/GitHub/Edinstvo-Learn/artifacts/showtime/skill-flow-2026-11-16/summary-source.mp4",
+    "simulator": "70B169BC-1696-4395-B23A-02AA6E8ACDA7",
+    "request_ms": 1794900519812.747,
+    "ready_ms": 1794900521389.46
+  }
+}

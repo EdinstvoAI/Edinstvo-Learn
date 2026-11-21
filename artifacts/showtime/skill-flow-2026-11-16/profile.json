@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "name": "Edinstvo Learn skill flow",
+  "canvas": {
+    "width": 1920,
+    "height": 1920,
+    "fps": 60
+  },
+  "device": {
+    "id": "iphone-17-pro-silver",
+    "source": "/Users/makark/showtime/assets/showtime/phones/iphone-17-pro-silver.png",
+    "manifest": "/Users/makark/showtime/assets/showtime/phones.json",
+    "source_size": [1350, 2760],
+    "screen_insets": [70, 73, 70, 73],
+    "screen_radius_fraction": [0.09, 0.042],
+    "left": 530,
+    "top": 90,
+    "width": 860,
+    "shadow_blur": 18,
+    "shadow_opacity": 0,
+    "shadow_offset": [0, 12],
+    "model": "iPhone 17 Pro",
+    "color": "Silver"
+  },
+  "layout": "full",
+  "background": {
+    "source": "/Users/makark/showtime/assets/showtime/provenance.json",
+    "palette": ["#8dc0eb", "#b9d1ea", "#c6b1ef", "#ebd7ef"],
+    "palette_note": "showtime Pastel",
+    "id": "pastel"
+  },
+  "tap": {
+    "fps": 60,
+    "start_number": 0,
+    "frames": 41,
+    "anchor_frame": 25,
+    "width": 420,
+    "blur": 0,
+    "overlay_space": "stage",
+    "maximum_diameter_fraction": 0.485,
+    "backdrop_sigma": 42,
+    "monochrome_rgb": [49, 123, 255],
+    "native_opacity_peak": 0.5019607843137255,
+    "tint_rgb": [167, 195, 238],
+    "sequence": "/Users/makark/showtime/assets/tap/native/tap_%05d.png"
+  },
+  "notes": [
+    "Keep the full native viewport and preserve the bottom corners.",
+    "Use only application text."
+  ],
+  "path_base": "config",
+  "policy": {
+    "editorial_text": false
+  }
+}

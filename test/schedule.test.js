@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  assessmentPauses, filterTasks, formatDate, monthGrid, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, tasksByWeek, upcomingTask, weekStart,
+  assessmentPauses, filterTasks, formatDate, monthGrid, monthRoadmap, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, tasksByWeek, upcomingTask, weekStart,
 } from '../src/schedule.js';
 import { questions } from '../src/questions.js';
 
@@ -101,4 +101,33 @@ test('month view contains complete Monday-first weeks and clamps month navigatio
   assert.equal(monthGrid('2027-02-07').length, 28);
   assert.equal(shiftMonth('2028-01-31', 1), '2028-02-29');
   assert.equal(shiftMonth('2026-01-31', -1), '2025-12-31');
+});
+
+test('month roadmap groups tasks into weeks, merges short edge weeks and counts progress', () => {
+  const tasks = [
+    task('carry', '2026-10-28', '09:00', { startDate: '2026-10-28', endDate: '2026-11-02' }),
+    task('early', '2026-11-03', '10:00'),
+    task('today', '2026-11-21', '12:00'),
+    task('late', '2026-11-30', '10:00'),
+    task('other', '2026-12-02', '10:00'),
+  ];
+  const map = monthRoadmap(tasks, '2026-11-15', '2026-11-21');
+  assert.deepEqual(map.weeks.map(({ start, end, state }) => [start, end, state]), [
+    ['2026-11-01', '2026-11-08', 'past'],
+    ['2026-11-09', '2026-11-15', 'past'],
+    ['2026-11-16', '2026-11-22', 'current'],
+    ['2026-11-23', '2026-11-30', 'future'],
+  ]);
+  assert.deepEqual(map.weeks.map((week) => week.tasks.map(({ id }) => id)), [['carry', 'early'], [], ['today'], ['late']]);
+  assert.equal(map.total, 4);
+  assert.equal(map.passed, 2);
+  assert.equal(map.days, 30);
+  assert.equal(map.elapsed, 21);
+  assert.deepEqual(map.busyDays, [1, 2, 3, 21, 30]);
+});
+
+test('month roadmap before and after the month', () => {
+  assert.equal(monthRoadmap([], '2026-12-01', '2026-11-21').elapsed, 0);
+  assert.equal(monthRoadmap([], '2026-10-01', '2026-11-21').elapsed, 31);
+  assert.ok(monthRoadmap([], '2026-12-01', '2026-11-21').weeks.every((week) => week.state === 'future'));
 });

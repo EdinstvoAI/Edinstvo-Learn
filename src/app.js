@@ -10,10 +10,12 @@ import './assessment-scene.js';
 import { softSkills } from './skills.js';
 import { folders } from './project-folders.js';
 import { questions } from './questions.js';
+import { placeSticker, stickerArt, stickers } from './stickers.js';
 import { compressPhoto, encodePhoto, request, telegramData } from './api.js';
-import { assessmentPauses, filterTasks, formatDate, monthGrid, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, upcomingTask, weekStart } from './schedule.js';
+import { assessmentPauses, filterTasks, formatDate, monthGrid, monthRoadmap, parseDate, shiftDate, shiftMonth, shuffledAnswers, taskOnDay, upcomingTask, weekStart } from './schedule.js';
 import './style.css';
 import './student-home.css';
+import './mentee-polish.css';
 
 const sections = [
   ['home', 'скиллы'],
@@ -29,6 +31,7 @@ const shortSoftLabels = [
 const weekDays = ['п', 'в', 'с', 'ч', 'п', 'с', 'в'];
 const monthName = new Intl.DateTimeFormat('ru', { month: 'long', timeZone: 'UTC' });
 const dayLabel = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+const shortWeekday = new Intl.DateTimeFormat('ru', { weekday: 'short', timeZone: 'UTC' });
 const longDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', weekday: 'long', timeZone: 'UTC' });
 const emptySoft = softSkills.map(() => null);
 const today = () => {
@@ -69,7 +72,12 @@ class LearnApp extends LitElement {
     navMotion: { state: true },
     wheelMotion: { state: true },
     selectedProject: { state: true },
-    projectDay: { state: true },
+    projectMonth: { state: true },
+    decorating: { state: true },
+    stickerDraft: { state: true },
+    selectedSticker: { state: true },
+    stickerError: { state: true },
+    commentError: { state: true },
     mentorStep: { state: true },
   };
 
@@ -381,6 +389,10 @@ class LearnApp extends LitElement {
   }
 
   cardDown(event) {
+    if (this.decorating) {
+      this.selectedSticker = -1;
+      return;
+    }
     this.cardDrag = { x: event.clientX, y: event.clientY, base: this.cardTurn ?? 0, moved: false };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -484,7 +496,8 @@ class LearnApp extends LitElement {
       if (page === 'students') void this.refresh().catch(() => {});
       return;
     }
-    if (page === 'project') this.projectDay = null;
+    if (page === 'project') this.projectMonth = null;
+    if (this.decorating) this.stopDecorating(false);
     const leavingSkills = this.page === 'home' && ['calendar', 'projects', 'profile'].includes(page);
     const summary = leavingSkills && this.querySelector('.home-summary');
     if (summary && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -694,24 +707,40 @@ class LearnApp extends LitElement {
         <button class="text-button" @click=${() => this.go('projects')}>Проекты</button>
         ${this.personId ? html`<button class="text-button" @click=${() => this.open({ type: 'reset-mentee', personId: this.personId, name })}>сбросить данные</button>` : nothing}
       </div>` : nothing}
-      <section class="profile-card3d" aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
+      <section class="profile-card3d" ?data-decorating=${this.decorating} aria-label="Профиль, нажми чтобы перевернуть" tabindex="0"
         @pointerdown=${(event) => this.cardDown(event)} @pointermove=${(event) => this.cardMove(event)}
         @pointerup=${(event) => this.cardUp(event)} @pointercancel=${(event) => this.cardUp(event)}
-        @keydown=${(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.manualMotion = true; this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
+        @keydown=${(event) => { if (!this.decorating && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); this.manualMotion = true; this.cardTurn = (this.cardTurn ?? 0) + 180; this.turnCard(this.cardTurn, 0, false); } }}>
         <div class="profile-card-3d" style=${'--turn-y:' + (this.cardTurn ?? 0) + 'deg'}>
           ${Array.from({ length: 6 }, (_, index) => html`<span class="card-slice" style=${'--slice:' + index} aria-hidden="true"></span>`)}
           <div class="card-face card-front">
-            <span class="card-role">${this.person.title || 'менти'}</span>
-            <h1>${name}</h1>
-            ${username ? html`<div class="profile-contact">@${username}</div>` : nothing}
+            <div class="card-top">
+              <img class="card-brand" src="/learn-wordmark.svg" alt="">
+              <svg class="card-wave" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7c2.5 3 2.5 7 0 10M12 4.5c3.8 4.4 3.8 10.6 0 15M16 2c5 5.8 5 14.2 0 20"/></svg>
+            </div>
+            <span class="card-chip" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="card-holo" aria-hidden="true"></span>
+            <div class="card-owner">
+              <span class="card-role">${this.person.title || 'менти'}</span>
+              <h1>${name}</h1>
+              <div class="card-meta">
+                ${username ? html`<span class="profile-contact">@${username}</span>` : html`<span></span>`}
+                ${createdAt ? html`<span class="card-since"><small>с</small>${new Intl.DateTimeFormat('ru', { month: '2-digit', year: '2-digit' }).format(new Date(createdAt))}</span>` : nothing}
+              </div>
+            </div>
+            ${this.cardStickers()}
           </div>
           <div class="card-face card-back">
+            <span class="card-stripe" aria-hidden="true"></span>
             <span class="card-role">первый вход</span>
             <strong>${createdAt ? new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(createdAt)) : 'дата пока не записана'}</strong>
-            <span>с этого дня начинается твой путь в единстве</span>
+            <span class="card-signature">${name}</span>
+            <span class="card-note">с этого дня начинается твой путь в единстве</span>
           </div>
         </div>
+        <span class="card-floor" aria-hidden="true"></span>
       </section>
+      ${this.role === 'mentee' ? this.decorateControls() : nothing}
       ${this.role === 'mentor' ? html`<button class="text-button profile-title-edit" @click=${() => this.open({ type: 'title' })}>роль на карточке: ${this.person.title || 'не задана'}</button>` : nothing}
       <section class="profile-lower memories" aria-labelledby="memories-title">
         <header class="memories-header">
@@ -735,6 +764,126 @@ class LearnApp extends LitElement {
         ${!photos.length && this.role === 'mentor' ? html`<p class="empty">фото пока нет.</p>` : nothing}
         ${this.photoError ? html`<p class="form-error photo-error" role="alert">${this.photoError}</p>` : nothing}
     </section>`;
+  }
+
+  // Стикеры лежат на лицевой стороне карточки. В режиме украшения карточка встаёт лицом,
+  // перестаёт вращаться, а стикеры можно двигать пальцем, поворачивать и снимать.
+  cardStickers() {
+    const list = this.decorating ? this.stickerDraft : this.person.cardStickers ?? [];
+    return html`<div class="card-stickers">${repeat(list, (item, index) => item.key ?? index, (item, index) => html`
+      <span class="card-sticker ${item.fresh ? 'is-new' : ''}" ?data-selected=${this.decorating && this.selectedSticker === index}
+        style=${`--x:${item.x}%;--y:${item.y}%;--r:${item.rotate}deg;--s:${item.scale};--i:${index}`}
+        @pointerdown=${(event) => this.stickerDown(event, index)} @pointermove=${(event) => this.stickerMove(event)}
+        @pointerup=${() => this.stickerUp()} @pointercancel=${() => this.stickerUp()}>
+        ${stickerArt(item.type)}
+        ${this.decorating && this.selectedSticker === index ? html`
+          <button class="sticker-tool sticker-remove" aria-label="Снять стикер" @pointerdown=${(event) => event.stopPropagation()}
+            @click=${() => this.removeSticker(index)}>×</button>
+          <button class="sticker-tool sticker-turn" aria-label="Повернуть стикер" @pointerdown=${(event) => event.stopPropagation()}
+            @click=${() => this.turnSticker(index)}>↻</button>` : nothing}
+      </span>`)}</div>`;
+  }
+
+  decorateControls() {
+    if (!this.decorating) {
+      return html`<button class="decorate-button" @click=${() => this.startDecorating()}>
+        <span class="decorate-spark" aria-hidden="true">✦</span><span>украсить карточку</span>
+        <span class="decorate-spark is-small" aria-hidden="true">✦</span>
+      </button>`;
+    }
+    const full = this.stickerDraft.length >= 12;
+    return html`<section class="sticker-tray" aria-label="Стикеры">
+      <header><strong>стикеры</strong><span>${this.stickerDraft.length} из 12</span></header>
+      <div class="sticker-grid">
+        ${stickers.map(([type, label], index) => html`<button class="sticker-pick" style=${'--i:' + index} ?disabled=${full}
+          aria-label=${'Наклеить: ' + label} @click=${() => this.addSticker(type)}>${stickerArt(type)}<small>${label}</small></button>`)}
+      </div>
+      <p class="sticker-hint">${full ? 'карточка заполнена, сними лишний стикер' : 'нажми, чтобы наклеить. стикер на карточке можно двигать'}</p>
+      ${this.stickerError ? html`<p class="form-error" role="alert">${this.stickerError}</p>` : nothing}
+      <div class="sticker-actions">
+        <button class="text-button" @click=${() => this.stopDecorating(false)}>отмена</button>
+        <button class="primary" ?disabled=${this.formBusy} @click=${() => this.stopDecorating(true)}>${this.formBusy ? 'сохраняем…' : 'готово'}</button>
+      </div>
+    </section>`;
+  }
+
+  startDecorating() {
+    this.manualMotion = true;
+    this.cardTurn = Math.round((this.cardTurn ?? 0) / 360) * 360;
+    this.turnCard(this.cardTurn, 0, false);
+    this.stickerKey = 0;
+    this.stickerDraft = (this.person.cardStickers ?? []).map((item) => ({ ...item, key: ++this.stickerKey }));
+    this.selectedSticker = -1;
+    this.stickerError = '';
+    this.decorating = true;
+  }
+
+  async stopDecorating(save) {
+    if (save) {
+      if (this.formBusy) return;
+      this.formBusy = true;
+      try {
+        await this.mutate('card-stickers', { stickers: this.stickerDraft.map(({ type, x, y, rotate, scale }) => ({ type, x, y, rotate, scale })) });
+        await this.refresh();
+      } catch (error) {
+        this.stickerError = error.message;
+        return;
+      } finally {
+        this.formBusy = false;
+      }
+    }
+    this.decorating = false;
+    this.stickerDraft = [];
+    this.selectedSticker = -1;
+  }
+
+  addSticker(type) {
+    if (this.stickerDraft.length >= 12) return;
+    const sticker = { ...placeSticker(type, this.stickerDraft), fresh: true, key: ++this.stickerKey };
+    this.stickerDraft = [...this.stickerDraft.map((item) => ({ ...item, fresh: false })), sticker];
+    this.selectedSticker = this.stickerDraft.length - 1;
+    navigator.vibrate?.(8);
+  }
+
+  removeSticker(index) {
+    this.stickerDraft = this.stickerDraft.filter((_, position) => position !== index);
+    this.selectedSticker = -1;
+  }
+
+  turnSticker(index) {
+    this.stickerDraft = this.stickerDraft.map((item, position) => position === index
+      ? { ...item, fresh: false, rotate: item.rotate >= 30 ? -30 : item.rotate + 15 } : item);
+  }
+
+  stickerDown(event, index) {
+    if (!this.decorating) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const face = this.querySelector('.card-front').getBoundingClientRect();
+    this.stickerDrag = { index, face, x: event.clientX, y: event.clientY, moved: false };
+    this.selectedSticker = index;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  stickerMove(event) {
+    const drag = this.stickerDrag;
+    if (!drag) return;
+    drag.moved ||= Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 3;
+    if (!drag.moved) return;
+    const x = Math.min(100, Math.max(0, (event.clientX - drag.face.left) / drag.face.width * 100));
+    const y = Math.min(100, Math.max(0, (event.clientY - drag.face.top) / drag.face.height * 100));
+    const element = event.currentTarget;
+    element.style.setProperty('--x', x + '%');
+    element.style.setProperty('--y', y + '%');
+    drag.position = [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+  }
+
+  stickerUp() {
+    const drag = this.stickerDrag;
+    this.stickerDrag = null;
+    if (!drag?.position) return;
+    const [x, y] = drag.position;
+    this.stickerDraft = this.stickerDraft.map((item, position) => position === drag.index ? { ...item, x, y, fresh: false } : item);
   }
 
   async removePhoto(photo) {
@@ -918,7 +1067,7 @@ class LearnApp extends LitElement {
       this.cardTilt = [limit((event.gamma - neutral.gamma) * 1.1, 32), limit(-(event.beta - neutral.beta) * .8, 24)];
       this.cardFrame ||= requestAnimationFrame(() => {
         this.cardFrame = 0;
-        if (!this.manualMotion && !this.cardDrag && this.page === 'profile') this.turnCard((this.cardTurn ?? 0) + this.cardTilt[0], this.cardTilt[1], true);
+        if (!this.manualMotion && !this.cardDrag && !this.decorating && this.page === 'profile') this.turnCard((this.cardTurn ?? 0) + this.cardTilt[0], this.cardTilt[1], true);
       });
       return;
     }
@@ -1189,30 +1338,40 @@ class LearnApp extends LitElement {
   projectPage() {
     const project = this.person.projects.find((item) => item.id === this.selectedProject?.id);
     if (!project) return this.projects();
+    const folder = folders.some(([id]) => id === project.folder) ? project.folder : 'gel';
+    const comments = project.comments ?? [];
+    const active = comments.filter((comment) => !comment.archivedAt);
+    const archived = comments.filter((comment) => comment.archivedAt);
     return html`<section class="project-page project-sheet" aria-labelledby="project-title">
         <header class="project-sheet-header">
-          <button class="text-button" aria-label="Выйти в список проектов" @click=${() => this.go('projects')}>← проекты</button>
-          <h1 id="project-title">${project.name}</h1>
-          <div class="project-controls">
-            <button class="text-button" @click=${() => this.open({ type: 'edit-project', project })}>редактировать</button>
-            <button class="text-button project-delete" @click=${() => this.open({ type: 'delete-project', project })}>удалить</button>
+          <div class="project-topbar">
+            <button class="text-button project-back" aria-label="Выйти в список проектов" @click=${() => this.go('projects')}>← проекты</button>
+            <div class="project-controls">
+              <button class="icon-button" aria-label="Редактировать проект" @click=${() => this.open({ type: 'edit-project', project })}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg></button>
+              <button class="icon-button project-delete" aria-label="Удалить проект" @click=${() => this.open({ type: 'delete-project', project })}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
+            </div>
           </div>
+          <div class="project-hero">
+            <div>
+              <h1 id="project-title">${project.name}</h1>
+              ${project.description ? html`<p class="project-description">${project.description}</p>` : nothing}
+            </div>
+            <img class="project-hero-art" src=${'/folders/' + folder + '.webp'} alt="">
+          </div>
+          ${project.sources?.length ? html`<div class="sources">${project.sources.map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>` : nothing}
         </header>
-        ${project.description ? html`<p>${project.description}</p>` : nothing}
-        <div class="sources">${(project.sources ?? []).map((source) => html`<a href=${source.url} target="_blank" rel="noopener noreferrer">${source.type} ↗</a>`)}</div>
-        <section class="project-plan"><h2>план обучения</h2>
-          ${this.projectCalendar(project)}
-          <div class="project-actions">
-            <button class="primary" @click=${() => this.open({ type: 'create', project, date: this.projectDay ?? today() })}>+ задача</button>
-            ${this.linkableTasks().length ? html`<button class="text-button"
-              @click=${() => this.open({ type: 'link-existing', project })}>привязать из календаря</button>` : nothing}
-          </div>
-        </section>
-        <section class="project-comments"><h2>комментарии ментора</h2>
-          ${project.comments?.length ? html`<ul>${project.comments.map((comment) => html`<li><strong data-unread-comment=${this.commentUnread(comment) ? comment.id : nothing}>${comment.author}</strong>
-            ${this.commentUnread(comment) ? html`<span class="unread-comments">новый</span>` : nothing}
-            <time datetime=${comment.createdAt}>${dayLabel.format(new Date(comment.createdAt))}</time>
-            <p>${comment.text}</p></li>`)}</ul>` : html`<p class="empty">пока нет комментариев.</p>`}
+        ${this.projectRoadmap(project)}
+        <section class="project-comments" aria-labelledby="comments-title">
+          <h2 id="comments-title">комментарии ментора ${active.length ? html`<span class="count-pill">${active.length}</span>` : nothing}</h2>
+          ${active.length ? html`<ul class="comment-list">${repeat(active, (comment) => comment.id, (comment) => this.projectComment(project, comment))}</ul>`
+            : html`<p class="empty">${archived.length ? 'всё прочитано. старые комментарии лежат в архиве.' : 'пока нет комментариев.'}</p>`}
+          ${archived.length ? html`<details class="comments-archive">
+            <summary>архив <span class="count-pill">${archived.length}</span></summary>
+            <ul class="comment-list">${repeat(archived, (comment) => comment.id, (comment) => this.projectComment(project, comment))}</ul>
+          </details>` : nothing}
+          ${this.commentError ? html`<p class="form-error" role="alert">${this.commentError}</p>` : nothing}
           ${this.role === 'mentor' ? html`<form autocapitalize="none" @submit=${(event) => this.addProjectComment(event, project)}>
             <label>Комментарий<textarea name="text" maxlength="1000" rows="2" required></textarea></label>
             ${this.formError && !this.modal ? html`<p class="form-error" role="alert">${this.formError}</p>` : nothing}
@@ -1220,6 +1379,50 @@ class LearnApp extends LitElement {
           </form>` : nothing}
         </section>
       </section>`;
+  }
+
+  projectComment(project, comment) {
+    const unread = this.commentUnread(comment);
+    const archived = Boolean(comment.archivedAt);
+    return html`<li class="comment-card ${unread ? 'is-unread' : ''}" data-comment-id=${comment.id}>
+      <span class="comment-avatar" aria-hidden="true">${comment.author?.[0] ?? 'м'}</span>
+      <div class="comment-body">
+        <div class="comment-head"><strong data-unread-comment=${unread ? comment.id : nothing}>${comment.author}</strong>
+          ${unread ? html`<span class="unread-comments">новый</span>` : nothing}
+          <time datetime=${comment.createdAt}>${dayLabel.format(new Date(comment.createdAt))}</time></div>
+        <p>${comment.text}</p>
+        ${this.role === 'mentee' ? html`<button class="comment-action" @click=${(event) => this.archiveComment(event, project, comment, !archived)}>
+          ${archived ? '↩ вернуть' : '✓ прочитано, в архив'}</button>`
+          : archived ? html`<small class="comment-archived">в архиве у менти</small>` : nothing}
+      </div>
+    </li>`;
+  }
+
+  // Карточка комментария сворачивается и улетает, затем сервер сохраняет архив. При ошибке карточка остаётся на месте.
+  async archiveComment(event, project, comment, archived) {
+    const card = event.currentTarget.closest('.comment-card');
+    if (card.dataset.busy) return;
+    card.dataset.busy = '1';
+    this.commentError = '';
+    const request = this.mutate('archive-project-comment', { projectId: project.id, id: comment.id, archived });
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const height = card.getBoundingClientRect().height;
+      await card.animate([
+        { height: height + 'px', opacity: 1, transform: 'none' },
+        { height: height + 'px', opacity: 0, transform: `translateX(${archived ? 40 : -40}px) scale(.96)`, offset: .55 },
+        { height: '0px', opacity: 0, marginBottom: '-8px', paddingBlock: '0px', transform: `translateX(${archived ? 40 : -40}px) scale(.96)` },
+      ], { duration: 420, easing: 'cubic-bezier(.3,.7,.2,1)', fill: 'forwards' }).finished.catch(() => {});
+    }
+    try {
+      await request;
+      this.confirmedCommentReads.add(comment.id);
+      await this.refresh();
+    } catch (error) {
+      this.commentError = error.message;
+      card.getAnimations().forEach((animation) => animation.cancel());
+    } finally {
+      delete card.dataset.busy;
+    }
   }
 
   async open(modal, clear = true) {
@@ -1237,39 +1440,66 @@ class LearnApp extends LitElement {
     return this.personTasks.filter((task) => !task.projectId && (this.role === 'mentor' || task.movable));
   }
 
-  projectCalendar(project) {
+  // Роудмап проекта на месяц: полоса дней сверху и недели этапами по вертикали.
+  projectRoadmap(project) {
     const currentDay = today();
     const now = new Date().toTimeString().slice(0, 5);
-    const tasks = filterTasks(this.personTasks.filter((task) => task.projectId === project.id), 'all', currentDay);
-    const next = upcomingTask(tasks, currentDay, now);
-    const nextDay = next ? (taskOnDay(next, currentDay) ? currentDay : next.startDate ?? next.date) : null;
-    const selected = this.projectDay ?? nextDay ?? currentDay;
-    const start = weekStart(selected);
-    const days = weekDays.map((label, index) => ({ label, day: shiftDate(start, index) }));
-    const dayTasks = filterTasks(tasks, 'today', selected);
-    return html`<details class="project-calendar" open>
-      <summary><strong>календарь задач</strong>
-        <span>${next ? 'ближайшая: ' + next.title + ', ' + dayLabel.format(parseDate(nextDay)) : 'нет ближайших задач'}</span>
-      </summary>
-      <div class="cal-nav">
-        <button class="text-button" @click=${() => { this.projectDay = shiftDate(selected, -7); }}>← предыдущая</button>
-        <button class="text-button" @click=${() => { this.projectDay = shiftDate(selected, 7); }}>следующая →</button>
+    const tasks = this.personTasks.filter((task) => task.projectId === project.id);
+    const next = upcomingTask(filterTasks(tasks, 'all', currentDay), currentDay, now);
+    const anchor = this.projectMonth ?? (next && !tasks.some((task) => (task.startDate ?? task.date).slice(0, 7) === currentDay.slice(0, 7))
+      ? next.startDate ?? next.date : currentDay);
+    const map = monthRoadmap(tasks, anchor, currentDay);
+    const month = parseDate(map.first);
+    const progress = map.total ? Math.round(map.passed / map.total * 100) : 0;
+    const busy = new Set(map.busyDays);
+    const stop = (task) => {
+      const starts = task.startDate ?? task.date;
+      const ends = task.endDate ?? task.date;
+      const state = task.done || ends < currentDay ? 'done' : task === next ? 'next' : taskOnDay(task, currentDay) ? 'now' : 'todo';
+      const editable = this.role === 'mentor' || task.movable;
+      return html`<li class="roadmap-stop is-${state}">
+        <time datetime=${starts}><strong>${parseDate(starts).getUTCDate()}</strong>${shortWeekday.format(parseDate(starts))}</time>
+        <div class="roadmap-stop-body">
+          <strong>${task.title}</strong>
+          <small>${ends !== starts ? 'до ' + dayLabel.format(parseDate(ends)) + ', ' : ''}${task.allDay ? 'весь день' : task.time + (task.endTime && task.endTime !== task.time ? ' до ' + task.endTime : '')}
+            ${state === 'next' ? html`<em>ближайшая</em>` : state === 'now' ? html`<em>сегодня</em>` : nothing}</small>
+        </div>
+        ${editable && state !== 'done' ? html`<button class="roadmap-edit" aria-label=${'Перенести: ' + task.title}
+          @click=${() => this.open({ type: 'move', task })}>⋯</button>` : state === 'done' ? html`<span class="roadmap-check" aria-label="пройдено">✓</span>` : nothing}
+      </li>`;
+    };
+    return keyed(map.first, html`<section class="roadmap" aria-labelledby="roadmap-title">
+      <header class="roadmap-head">
+        <button class="roadmap-arrow" aria-label="Предыдущий месяц" @click=${() => { this.projectMonth = shiftMonth(map.first, -1); }}>‹</button>
+        <div class="roadmap-title">
+          <small>роудмап на месяц</small>
+          <h2 id="roadmap-title" class="stretch-title">${monthName.format(month)}</h2>
+        </div>
+        <button class="roadmap-arrow" aria-label="Следующий месяц" @click=${() => { this.projectMonth = shiftMonth(map.first, 1); }}>›</button>
+      </header>
+      <div class="roadmap-stats">
+        <div><strong>${map.total}</strong><span>${{ one: 'задача', few: 'задачи', many: 'задач' }[new Intl.PluralRules('ru').select(map.total)]}</span></div>
+        <div><strong>${progress}%</strong><span>пройдено</span></div>
+        <div><strong>${map.elapsed >= map.days ? 0 : map.days - map.elapsed}</strong><span>дн. до конца</span></div>
       </div>
-      <div class="cal-week cal-days" aria-label="Дни недели проекта">
-        ${days.map(({ label, day }) => {
-          const date = parseDate(day);
-          const busy = tasks.some((task) => taskOnDay(task, day));
-          return html`<button aria-label=${longDate.format(date) + (busy ? ', есть задачи' : '')}
-            aria-pressed=${day === selected} aria-current=${day === currentDay ? 'date' : nothing}
-            class=${busy ? 'is-busy' : ''} @click=${() => { this.projectDay = day; }}>
-            <small aria-hidden="true">${label}</small><strong>${date.getUTCDate()}</strong>
-          </button>`;
-        })}
+      <div class="roadmap-strip" aria-hidden="true" style=${'--days:' + map.days + ';--elapsed:' + map.elapsed}>
+        <span class="roadmap-strip-fill"></span>
+        ${Array.from({ length: map.days }, (_, index) => html`<i style=${'--n:' + index * 14} class=${[busy.has(index + 1) && 'is-busy', index + 1 === map.elapsed && map.first <= currentDay && 'is-today'].filter(Boolean).join(' ')}></i>`)}
       </div>
-      <h3>${longDate.format(parseDate(selected))}</h3>
-      ${dayTasks.length ? html`<div class="agenda">${dayTasks.map((task) => this.calendarTask(task, false))}</div>`
-        : html`<p class="empty">на этот день задач нет.</p>`}
-    </details>`;
+      <ol class="roadmap-weeks">
+        ${map.weeks.map((week, index) => html`<li class="roadmap-week is-${week.state}" style=${'--i:' + index}>
+          <span class="roadmap-node" aria-hidden="true">${week.state === 'past' ? '✓' : week.index}</span>
+          <div class="roadmap-week-body">
+            <h3>этап ${week.index} <small>${parseDate(week.start).getUTCDate()}–${dayLabel.format(parseDate(week.end))}</small>
+              ${week.state === 'current' ? html`<span class="roadmap-now">сейчас</span>` : nothing}</h3>
+            ${week.tasks.length ? html`<ul>${week.tasks.map(stop)}</ul>` : html`<p class="roadmap-free">${week.state === 'past' ? 'без задач' : 'свободная неделя'}</p>`}
+            ${this.personId && week.state !== 'past' ? html`<button class="roadmap-add" @click=${() => this.open({ type: 'create', project,
+              date: week.state === 'current' ? currentDay : week.start })}>+ задача</button>` : nothing}
+          </div>
+        </li>`)}
+      </ol>
+      ${this.linkableTasks().length ? html`<button class="text-button roadmap-link" @click=${() => this.open({ type: 'link-existing', project })}>привязать задачу из календаря</button>` : nothing}
+    </section>`);
   }
 
   async addProjectComment(event, project) {

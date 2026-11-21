@@ -66,3 +66,17 @@ export function projectSources(data) {
   }
   return sources;
 }
+
+// Стикеры на карточке профиля. Каталог совпадает с src/stickers.js, сервер хранит только тип и положение.
+export const stickerTypes = new Set(['figma', 'claude', 'chatgpt', 'telegram', 'code', 'notion', 'star', 'heart', 'fire', 'bolt', 'hundred', 'smile']);
+export const maxCardStickers = 12;
+
+export function cardStickers(value) {
+  requireInput(Array.isArray(value) && value.length <= maxCardStickers, 'На карточке помещается до 12 стикеров.');
+  const clamp = (number, min, max) => Math.round(Math.min(max, Math.max(min, number)) * 10) / 10;
+  return value.map((item) => {
+    requireInput(item && stickerTypes.has(item.type)
+      && [item.x, item.y, item.rotate, item.scale].every((number) => typeof number === 'number' && Number.isFinite(number)));
+    return { type: item.type, x: clamp(item.x, 0, 100), y: clamp(item.y, 0, 100), rotate: clamp(item.rotate, -40, 40), scale: clamp(item.scale, .6, 1.6) };
+  });
+}

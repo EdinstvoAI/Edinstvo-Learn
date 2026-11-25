@@ -22,3 +22,6 @@
 - [server/mentor-login.js](../server/mentor-login.js) проверяет почту, пароль и PIN ментора, [server/hash-secret.js](../server/hash-secret.js) печатает хеш для `.env`.
 - [src/lottie-scenes.js](../src/lottie-scenes.js) собирает Lottie-сцены теста, [src/assessment-scene.js](../src/assessment-scene.js) их проигрывает, [public/motion/assessment-objects.json](../public/motion/assessment-objects.json) хранит стеклянные объекты.
 - [src/mentee-polish.css](../src/mentee-polish.css) — карточка профиля со стикерами, роудмап проекта, архив комментариев и движение этих экранов. Подключается после `student-home.css`. [src/stickers.js](../src/stickers.js) рисует стикеры и выбирает место для нового. `monthRoadmap` в [src/schedule.js](../src/schedule.js) собирает месяц проекта по неделям.
+# Кабинет ментора
+
+- `src/mentor.css` — адаптивный список учеников, поиск, вкладки и рабочий обзор. Методы `students`, `mentorHeader`, `mentorOverview` в `src/app.js` используют существующие данные и действия API.

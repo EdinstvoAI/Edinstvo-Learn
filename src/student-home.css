@@ -952,7 +952,15 @@ dialog[data-project-wizard] form { display: flex; flex-direction: column; min-he
 .wizard-body { overflow: auto; min-height: 0; overscroll-behavior: contain; padding: 2px; }
 dialog[data-project-wizard] form > .primary { flex: none; min-height: 44px; text-transform: lowercase; }
 
-.student-shell[data-page=home] .home-person { position: relative; }
+.student-shell[data-page=home] .home-person { position: sticky; }
+
+/* Dock clearance belongs inside the gray sheet so its background reaches the viewport edge. */
+.student-shell[data-page=projects] .student-scroll { padding-bottom: 0; }
+.student-shell[data-page=projects] .student-scroll > main { padding-bottom: 0; }
+.student-shell[data-page=projects] .screen {
+  min-height: var(--tg-viewport-stable-height, 100dvh);
+  padding-bottom: calc(110px + max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom)));
+}
 .skill-readout > span { min-width: 0; overflow-wrap: anywhere; }
 .skill-reveal { position: absolute; right: 10px; top: 50%; translate: 0 -50%; width: 56px; height: 56px; }
 

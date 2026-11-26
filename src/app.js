@@ -16,6 +16,7 @@ import { assessmentPauses, filterTasks, formatDate, monthGrid, monthRoadmap, par
 import './style.css';
 import './student-home.css';
 import './mentee-polish.css';
+import './mentor.css';
 
 const sections = [
   ['home', 'скиллы'],
@@ -49,6 +50,8 @@ class LearnApp extends LitElement {
     accessCode: { state: true },
     personId: { state: true },
     people: { state: true },
+    studentSearch: { state: true },
+    studentFilter: { state: true },
     tasks: { state: true },
     date: { state: true },
     calendarFilter: { state: true },
@@ -607,11 +610,8 @@ class LearnApp extends LitElement {
     };
     const learner = this.role === 'mentee';
     const showDock = this.page !== 'assessment';
-    const content = html`<main class=${isHome ? 'home-main' : ''}>
-      ${this.role === 'mentor' ? html`<header class="admin-bar">
-        <button class="text-button" @click=${() => this.go('students')}>Ученики</button>
-        <button class="text-button" @click=${() => this.go('account')}>Мой кабинет</button>
-      </header>` : nothing}
+    const content = html`<main class=${this.role === 'mentor' ? 'mentor-shell' : isHome ? 'home-main' : ''}>
+      ${this.role === 'mentor' ? this.mentorHeader() : nothing}
       <div class=${isHome ? 'home-sheet' : 'page-content'}>
         <div class="screen" data-page=${this.page}>${keyed(this.page, screen[this.page]())}</div>
       </div>
@@ -640,16 +640,55 @@ class LearnApp extends LitElement {
   }
 
   students() {
+    const query = (this.studentSearch ?? '').trim().toLocaleLowerCase('ru');
+    const overdue = (person) => this.tasks.filter((task) => task.person === person.id && !task.done && task.date < today());
+    const people = this.people.filter((person) =>
+      (person.name + ' ' + (person.username ?? '')).toLocaleLowerCase('ru').includes(query)
+      && (this.studentFilter !== 'overdue' || overdue(person).length)
+      && (this.studentFilter !== 'onboarding' || person.pending || !person.soft));
     return html`<section class="students">
-      <h1>Ученики</h1>
-      ${this.people.length ? html`<div class="student-list">${this.people.map((person) => html`
-        <button class="student-row" @click=${() => { this.selectPerson(person.id); this.go('profile'); }}>
-          <span class="student-avatar">${this.avatar(person)}</span>
-          <span><strong>${person.name}</strong><small>${person.pending ? 'Ожидает код' : person.soft ? 'В менторстве' : 'Проходит входной тест'}</small></span>
-          <span aria-hidden="true">↗</span>
-        </button>`)}</div>` : html`<p class="empty">Здесь появятся ученики, которые откроют бота.</p>
-          <button class="text-button" @click=${() => this.go('account')}>Открыть код доступа ↗</button>`}
+      <div class="mentor-heading"><div><p class="mentor-muted">${new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'long', weekday: 'long' }).format(new Date())}</p>
+        <h1>твои ученики<span class="mentor-count">${this.people.length}</span></h1></div>
+        <button class="mentor-code-link" @click=${() => this.go('account')}>код для входа<span aria-hidden="true">↗</span></button></div>
+      <div class="mentor-tools">
+        <label class="mentor-search"><span class="sr-only">поиск ученика</span><input type="search" placeholder="найти по имени или @username"
+          .value=${this.studentSearch ?? ''} @input=${(event) => { this.studentSearch = event.target.value; }}></label>
+        <nav class="mentor-filters" aria-label="фильтр учеников">${[['all', 'все'], ['overdue', 'есть просроченные'], ['onboarding', 'первый вход']].map(([id, label]) => html`
+          <button aria-pressed=${(this.studentFilter ?? 'all') === id} @click=${() => { this.studentFilter = id; }}>${label}</button>`)}</nav>
+      </div>
+      ${people.length ? html`<div class="mentor-roster">${people.map((person) => {
+        const active = this.tasks.filter((task) => task.person === person.id && !task.done);
+        const late = overdue(person).length;
+        return html`<article class="mentor-student">
+          <button class="mentor-person" @click=${() => { this.selectPerson(person.id); this.go('profile'); }}>
+            ${this.avatar(person)}<span><strong>${person.name}</strong><small>${person.pending ? 'ожидает код' : person.soft ? (person.username ? '@' + person.username.replace(/^@/, '') : 'в менторстве') : 'проходит входной тест'}</small></span>
+          </button>
+          <div class="mentor-student-status"><span>${person.projects.length} ${{ one: 'проект', few: 'проекта', many: 'проектов', other: 'проекта' }[new Intl.PluralRules('ru').select(person.projects.length)]}</span><span>${active.length} ${{ one: 'задача', few: 'задачи', many: 'задач', other: 'задачи' }[new Intl.PluralRules('ru').select(active.length)]}</span>
+            ${late ? html`<strong>${late} просрочено</strong>` : nothing}</div>
+          <div class="mentor-student-actions">
+            <button @click=${() => { this.selectPerson(person.id); this.go('skills'); }}>навыки</button>
+            <button @click=${() => { this.selectPerson(person.id); this.go('projects'); }}>проекты</button>
+            <button class="mentor-add-task" @click=${() => { this.selectPerson(person.id); this.open({ type: 'create' }); }}>+ задача</button>
+          </div>
+        </article>`;
+      })}</div>` : html`<div class="mentor-empty"><h2>${this.people.length ? 'никого не нашли' : 'первые ученики скоро здесь'}</h2>
+        <p>${this.people.length ? 'попробуй другое имя или фильтр' : 'ученик открывает бота и вводит твой код. аккаунт создастся автоматически'}</p>
+        <button class="text-button" @click=${() => { this.studentSearch = ''; this.studentFilter = 'all'; if (!this.people.length) this.go('account'); }}>${this.people.length ? 'сбросить поиск' : 'посмотреть код'}</button></div>`}
     </section>`;
+  }
+
+  mentorHeader() {
+    const hasStudent = !['students', 'account'].includes(this.page) && this.personId;
+    return html`<header class="mentor-header">
+      <div class="mentor-topbar"><button class="mentor-brand" @click=${() => this.go('students')} aria-label="ученики"><img src="/edinstvo-wordmark.svg" alt="единство"><span>ментор</span></button>
+        <button class="mentor-account" aria-current=${this.page === 'account' ? 'page' : nothing} @click=${() => this.go('account')}>мой кабинет</button></div>
+      ${hasStudent ? html`<div class="mentor-context"><button class="mentor-back" @click=${() => this.go('students')}>все ученики</button>
+        <label><span class="sr-only">выбрать ученика</span><select .value=${this.personId} @change=${(event) => { this.selectPerson(event.target.value); this.selectedProject = null; this.go('profile'); }}>
+          ${this.people.map((person) => html`<option value=${person.id}>${person.name}</option>`)}</select></label>
+        <button class="mentor-quick-task" @click=${() => this.open({ type: 'create' })}>+ задача</button></div>
+        <nav class="mentor-tabs" aria-label="разделы ученика">${[['profile', 'обзор'], ['skills', 'навыки'], ['calendar', 'календарь'], ['projects', 'проекты']].map(([id, label]) => html`
+          <button aria-current=${this.page === id || id === 'projects' && this.page === 'project' ? 'page' : nothing} @click=${() => this.go(id)}>${label}</button>`)}</nav>` : nothing}
+    </header>`;
   }
 
   adminAccount() {
@@ -699,6 +738,7 @@ class LearnApp extends LitElement {
   }
 
   profile() {
+    if (this.role === 'mentor') return this.mentorOverview();
     const { name, username, photos = [], createdAt } = this.person;
     return html`
       ${this.role === 'mentor' ? html`<div class="student-actions">
@@ -768,6 +808,36 @@ class LearnApp extends LitElement {
 
   // Стикеры лежат на лицевой стороне карточки. В режиме украшения карточка встаёт лицом,
   // перестаёт вращаться, а стикеры можно двигать пальцем, поворачивать и снимать.
+  mentorOverview() {
+    const person = this.person;
+    const tasks = this.personTasks.filter((task) => !task.done)
+      .sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')));
+    return html`<section class="mentor-overview">
+      <div class="mentor-person-heading">${this.avatar(person)}<div><h1>${person.name}</h1>
+        <p class="mentor-muted">${person.pending ? 'ожидает код доступа' : person.soft ? 'входной тест пройден' : 'входной тест ещё не пройден'}</p></div></div>
+      <div class="mentor-overview-grid"><section class="mentor-agenda">
+        <div class="mentor-section-head"><h2>ближайшие задачи</h2><button class="text-button" @click=${() => this.go('calendar')}>календарь</button></div>
+        ${tasks.length ? html`<div class="mentor-task-list">${tasks.slice(0, 5).map((task) => html`<button class="mentor-task" @click=${() => { this.date = task.date; this.go('calendar'); }}>
+          <time datetime=${task.date}>${new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short' }).format(parseDate(task.date))}</time>
+          <span><strong>${task.title}</strong><small>${task.date < today() ? 'просрочена' : task.allDay ? 'весь день' : task.time}</small></span>
+        </button>`)}</div>` : html`<p class="mentor-muted">задач пока нет. добавь первый шаг для ученика</p>`}
+        <button class="mentor-quick-task" @click=${() => this.open({ type: 'create' })}>+ добавить задачу</button>
+      </section><section class="mentor-overview-projects"><div class="mentor-section-head"><h2>проекты</h2><button class="text-button" @click=${() => this.go('projects')}>все проекты</button></div>
+        ${person.projects.length ? html`<div class="mentor-project-preview">${person.projects.slice(0, 2).map((project) => this.projectCard(project))}</div>` : html`<p class="mentor-muted">создай проект, чтобы собрать задачи и обратную связь вместе</p>`}
+        <button class="text-button" @click=${() => this.open({ type: 'new-project', step: 1 })}>+ новый проект</button>
+      </section></div>
+      <section class="mentor-memories"><div class="mentor-section-head"><h2>воспоминания</h2><span class="mentor-muted">${person.photos.length}</span></div>
+        ${person.photos.length ? html`<div class="mentor-photo-strip">${person.photos.map((photo) => html`<figure><img src=${photo.url} alt=${photo.caption || 'рабочий процесс'} loading="lazy">${photo.caption ? html`<figcaption>${photo.caption}</figcaption>` : nothing}</figure>`)}</div>` : html`<p class="mentor-muted">здесь появятся фотографии рабочего процесса ученика</p>`}
+      </section>
+      <details class="mentor-settings"><summary>управление учеником</summary><div>
+        <button class="text-button" @click=${() => this.open({ type: 'title' })}>роль на карточке: ${person.title || 'не задана'}</button>
+        <button class="text-button" @click=${() => this.open({ type: 'import-calendar' })}>импорт календаря .ics</button>
+        ${this.calendarImportStatus ? html`<p role="status">${this.calendarImportStatus}</p>` : nothing}
+        <button class="text-button" @click=${() => this.open({ type: 'reset-mentee', personId: this.personId, name: person.name })}>сбросить данные</button>
+      </div></details>
+    </section>`;
+  }
+
   cardStickers() {
     const list = this.decorating ? this.stickerDraft : this.person.cardStickers ?? [];
     return html`<div class="card-stickers">${repeat(list, (item, index) => item.key ?? index, (item, index) => html`
